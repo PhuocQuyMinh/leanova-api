@@ -1,0 +1,35 @@
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const errorHandler = require('./core/middlewares/errorHandler');
+const AppError = require('./core/utils/appError');
+
+const app = express();
+
+// 1. Global Middlewares
+app.use(helmet()); // Bảo vệ HTTP headers
+app.use(cors());   // Cho phép Frontend gọi API
+app.use(express.json()); // Đọc data JSON từ body
+app.use(morgan('dev')); // Log request ra console
+
+// Import các file routes
+const authRoutes = require('./modules/auth/auth.routes');
+
+// 2. Routes
+app.get('/api/healthcheck', (req, res) => {
+    res.status(200).json({ status: 'success', message: 'Hệ thống Leanova đang hoạt động tốt!' });
+});
+
+// Cắm route auth vào hệ thống
+app.use('/api/auth', authRoutes);
+
+// 3. Xử lý đường dẫn không tồn tại (404)
+app.use((req, res, next) => {
+    next(new AppError(`Không tìm thấy đường dẫn ${req.originalUrl} trên hệ thống!`, 404));
+});
+
+// 4. Global Error Handler (Luôn nằm ở cuối cùng)
+app.use(errorHandler);
+
+module.exports = app;
