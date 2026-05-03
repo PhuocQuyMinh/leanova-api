@@ -15,6 +15,9 @@ app.use(morgan('dev')); // Log request ra console
 
 // Import các file routes
 const authRoutes = require('./modules/auth/auth.routes');
+const userRoutes = require('./modules/users/user.routes');
+const courseRoutes = require('./modules/courses/course.routes');
+
 
 // 2. Routes
 app.get('/api/healthcheck', (req, res) => {
@@ -23,6 +26,11 @@ app.get('/api/healthcheck', (req, res) => {
 
 // Cắm route auth vào hệ thống
 app.use('/api/auth', authRoutes);
+
+// Cắm route (Nằm dưới route auth)
+app.use('/api/users', userRoutes);
+
+app.use('/api/courses', courseRoutes);
 
 // 3. Xử lý đường dẫn không tồn tại (404)
 app.use((req, res, next) => {

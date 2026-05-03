@@ -2,6 +2,7 @@ require('dotenv').config(); // Load biến môi trường
 
 const sequelize = require('./core/database/init.mysql'); // <-- Gọi file kết nối
 const User = require('./modules/users/user.model');      // <-- Gọi Model User để nó biết mà tạo bảng
+const Course = require('./modules/courses/course.model'); // Thêm dòng này để Sequelize biết và tạo bảng
 
 const app = require('./app');
 
