@@ -10,6 +10,8 @@ const router = express.Router();
 router.get('/courses', storeController.getPublishedCourses);
 router.get('/courses/:id', storeController.getCourseDetailPublic);
 
+router.get('/vnpay_return', storeController.vnpayReturn);
+
 // ==========================================
 // PROTECTED ROUTES (Phải đăng nhập mới được mua)
 // ==========================================

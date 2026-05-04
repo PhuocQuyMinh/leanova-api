@@ -6,11 +6,15 @@ const Quiz = require('../courses/quiz.model');
 const User = require('../users/user.model');
 const CartItem = require('./cart_item.model');
 const Enrollment = require('./enrollment.model');
+const Order = require('./order.model');
 const sequelize = require('../../core/database/init.mysql');
 const AppError = require('../../core/utils/appError');
 const LessonProgress = require('./lesson_progress.model');
 const QuizQuestion = require('../courses/quiz_question.model');
 const QuizAttempt = require('./quiz_attempt.model');
+const crypto = require('crypto');
+const moment = require('moment');
+const qs = require('qs');
 
 // 1. Cửa hàng: Lấy danh sách khóa học đang bán
 exports.getPublishedCourses = async () => {
@@ -86,33 +90,133 @@ exports.getMyCart = async (userId) => {
     });
 };
 
-// 5. Thanh toán (Tạo Enrollment & Xóa Giỏ hàng bằng Transaction)
-exports.checkout = async (userId) => {
-    const cartItems = await CartItem.findAll({ where: { userId } });
-    if (cartItems.length === 0) throw new AppError('Giỏ hàng của bạn đang trống!', 400);
+// 5. Nâng cấp: Tạo Đơn hàng & Sinh link thanh toán VNPay (đã có tính giá triền trong link thanh toán)
+exports.checkout = async (userId, ipAddr) => {
+    // 1. Tính tổng tiền giỏ hàng
+    const cartItems = await CartItem.findAll({
+        where: { userId },
+        include: [{ model: Course, attributes: ['price'] }]
+    });
 
-    const t = await sequelize.transaction();
+    if (cartItems.length === 0) throw new AppError('Giỏ hàng trống!', 400);
 
-    try {
-        // Tạo mảng dữ liệu để nạp vào bảng Enrollment
-        const enrollmentsData = cartItems.map(item => ({
-            userId: userId,
-            courseId: item.courseId
-        }));
+    let totalAmount = 0;
+    cartItems.forEach(item => totalAmount += item.Course.price);
 
-        // 1. Ghi danh (Cấp quyền sở hữu khóa học)
-        await Enrollment.bulkCreate(enrollmentsData, { transaction: t });
+    // 2. Tạo mã đơn hàng duy nhất (TxnRef)
+    const date = new Date();
 
-        // 2. Làm sạch giỏ hàng của User này
-        await CartItem.destroy({ where: { userId }, transaction: t });
+    // Mã đơn hàng
+    const txnRef = moment(date).format('DDHHmmss');
 
-        await t.commit();
-        return { message: 'Thanh toán thành công! Khóa học đã được thêm vào tủ sách của bạn.' };
-    } catch (error) {
-        await t.rollback();
-        throw new AppError('Có lỗi xảy ra trong quá trình thanh toán!', 500);
+    // 3. Lưu đơn hàng vào DB với trạng thái Pending
+    const order = await Order.create({
+        userId,
+        amount: totalAmount,
+        txnRef,
+        status: 'Pending'
+    });
+
+    // 4. Xây dựng tham số gửi sang VNPay
+    const tmnCode = process.env.VNP_TMN_CODE;
+    const secretKey = process.env.VNP_HASH_SECRET;
+    const vnpUrl = process.env.VNP_URL;
+    const returnUrl = process.env.VNP_RETURN_URL;
+    const createDate = moment(date).format('YYYYMMDDHHmmss');
+
+    let vnp_Params = {
+        'vnp_Version': '2.1.0',
+        'vnp_Command': 'pay',
+        'vnp_TmnCode': tmnCode,
+        'vnp_Locale': 'vn',
+        'vnp_CurrCode': 'VND',
+        'vnp_TxnRef': txnRef,
+        'vnp_OrderInfo': `Thanh toan don hang ${txnRef}`,
+        'vnp_OrderType': 'other',
+        'vnp_Amount': totalAmount * 100, // VNPay yêu cầu nhân 100
+        'vnp_ReturnUrl': returnUrl,
+        'vnp_IpAddr': ipAddr,
+        'vnp_CreateDate': createDate
+    };
+
+    // 5. Sắp xếp tham số và Tạo chữ ký bảo mật (Checksum)
+    vnp_Params = sortObject(vnp_Params); // Gọi hàm phụ trợ bên dưới
+    const signData = qs.stringify(vnp_Params, { encode: false });
+    const hmac = crypto.createHmac("sha512", secretKey);
+    const signed = hmac.update(new Buffer.from(signData, 'utf-8')).digest("hex");
+    vnp_Params['vnp_SecureHash'] = signed;
+
+    // 6. Trả về URL để Frontend chuyển hướng người dùng sang VNPay
+    const paymentUrl = vnpUrl + '?' + qs.stringify(vnp_Params, { encode: false });
+
+    return { paymentUrl, orderId: order.id };
+};
+
+// 5.1 Xử lý kết quả VNPay trả về
+exports.vnpayReturn = async (vnp_Params) => {
+    const secureHash = vnp_Params['vnp_SecureHash'];
+    delete vnp_Params['vnp_SecureHash'];
+    delete vnp_Params['vnp_SecureHashType'];
+
+    vnp_Params = sortObject(vnp_Params);
+    const secretKey = process.env.VNP_HASH_SECRET;
+    const signData = qs.stringify(vnp_Params, { encode: false });
+    const hmac = crypto.createHmac("sha512", secretKey);
+    const signed = hmac.update(new Buffer.from(signData, 'utf-8')).digest("hex");
+
+    // Kiểm tra chữ ký có chuẩn không (Chống Hacker fake URL)
+    if (secureHash === signed) {
+        const txnRef = vnp_Params['vnp_TxnRef'];
+        const responseCode = vnp_Params['vnp_ResponseCode'];
+
+        const order = await Order.findOne({ where: { txnRef } });
+        if (!order) throw new AppError('Đơn hàng không tồn tại!', 404);
+
+        if (responseCode === '00') {
+            // GIAO DỊCH THÀNH CÔNG (Tiền đã vào túi)
+            // 1. Cập nhật Order
+            order.status = 'Success';
+            await order.save();
+
+            // 2. Lấy giỏ hàng và Chuyển thành Enrollment (Giao khóa học)
+            const cartItems = await CartItem.findAll({ where: { userId: order.userId } });
+            const enrollmentsData = cartItems.map(item => ({
+                userId: order.userId,
+                courseId: item.courseId
+            }));
+            await Enrollment.bulkCreate(enrollmentsData);
+
+            // 3. Xóa giỏ hàng
+            await CartItem.destroy({ where: { userId: order.userId } });
+
+            return { code: '00', message: 'Thanh toán thành công! Khóa học đã được mở.' };
+        } else {
+            // GIAO DỊCH THẤT BẠI
+            order.status = 'Failed';
+            await order.save();
+            return { code: '97', message: 'Thanh toán thất bại hoặc bị hủy!' };
+        }
+    } else {
+        throw new AppError('Chữ ký bảo mật không hợp lệ!', 400);
     }
 };
+
+// --- HÀM PHỤ TRỢ (Bắt buộc của VNPay để chuẩn hóa chuỗi) ---
+function sortObject(obj) {
+    let sorted = {};
+    let str = [];
+    let key;
+    for (key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            str.push(encodeURIComponent(key));
+        }
+    }
+    str.sort();
+    for (key = 0; key < str.length; key++) {
+        sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
+    }
+    return sorted;
+}
 
 // 6. Không gian học tập: Lấy danh sách khóa học đã sở hữu (My Learning)
 exports.getMyEnrollments = async (userId) => {

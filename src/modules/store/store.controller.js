@@ -22,8 +22,15 @@ exports.getMyCart = catchAsync(async (req, res, next) => {
 });
 
 exports.checkout = catchAsync(async (req, res, next) => {
-    const result = await storeService.checkout(req.user.id);
-    res.status(200).json({ status: 'success', message: result.message });
+    // VNPay yêu cầu truyền IP của máy người mua
+    let ipAddr = req.headers['x-forwarded-for'] || req.connection.remoteAddress || '127.0.0.1';
+
+    const result = await storeService.checkout(req.user.id, ipAddr);
+    res.status(200).json({
+        status: 'success',
+        message: 'Vui lòng thanh toán qua link đính kèm',
+        data: { paymentUrl: result.paymentUrl }
+    });
 });
 
 exports.getMyEnrollments = catchAsync(async (req, res, next) => {
@@ -47,5 +54,14 @@ exports.toggleLessonComplete = catchAsync(async (req, res, next) => {
 exports.submitQuiz = catchAsync(async (req, res, next) => {
     // req.body.answers là mảng đáp án
     const result = await storeService.submitQuiz(req.user.id, req.params.quizId, req.body.answers);
+    res.status(200).json({ status: 'success', data: result });
+});
+
+// Thêm hàm xử lý Return
+exports.vnpayReturn = catchAsync(async (req, res, next) => {
+    const result = await storeService.vnpayReturn(req.query); // VNPay trả data qua query string
+
+    // Thường trong thực tế, đoạn này sẽ dùng res.redirect() để đá học viên về lại trang Frontend (Vue/React)
+    // Nhưng vì đang test API, ta cứ trả JSON ra xem trước 
     res.status(200).json({ status: 'success', data: result });
 });

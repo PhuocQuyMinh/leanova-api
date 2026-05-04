@@ -13,6 +13,7 @@ const CartItem = require('./modules/store/cart_item.model');
 const Enrollment = require('./modules/store/enrollment.model');
 const LessonProgress = require('./modules/store/lesson_progress.model');
 const QuizAttempt = require('./modules/store/quiz_attempt.model');
+const Order = require('./modules/store/order.model');
 
 
 
