@@ -26,8 +26,6 @@ exports.checkout = catchAsync(async (req, res, next) => {
     res.status(200).json({ status: 'success', message: result.message });
 });
 
-// ... (code cũ)
-
 exports.getMyEnrollments = catchAsync(async (req, res, next) => {
     const enrollments = await storeService.getMyEnrollments(req.user.id);
     res.status(200).json({ status: 'success', results: enrollments.length, data: { enrollments } });
@@ -37,4 +35,11 @@ exports.getEnrolledCourseDetail = catchAsync(async (req, res, next) => {
     // Truyền cả ID của Học viên đang đăng nhập và ID khóa học họ muốn xem
     const course = await storeService.getEnrolledCourseDetail(req.user.id, req.params.courseId);
     res.status(200).json({ status: 'success', data: { course } });
+});
+
+exports.toggleLessonComplete = catchAsync(async (req, res, next) => {
+    const { courseId, lessonId } = req.params;
+    const result = await storeService.toggleLessonComplete(req.user.id, courseId, lessonId);
+
+    res.status(200).json({ status: 'success', data: result });
 });

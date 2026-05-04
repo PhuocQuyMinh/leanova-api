@@ -19,8 +19,11 @@ router.get('/cart', storeController.getMyCart);
 router.post('/cart', storeController.addToCart);
 router.post('/checkout', storeController.checkout);
 
-// ---> NHÓM KHÔNG GIAN HỌC TẬP (THÊM VÀO ĐÂY) <---
+// ---> NHÓM KHÔNG GIAN HỌC TẬP <---
 router.get('/my-learning', storeController.getMyEnrollments);
 router.get('/my-learning/:courseId', storeController.getEnrolledCourseDetail);
+
+// [MỚI] API Đánh dấu hoàn thành bài học
+router.put('/my-learning/:courseId/lessons/:lessonId/complete', storeController.toggleLessonComplete);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../core/database/init.mysql');
+const LessonProgress = require('../store/lesson_progress.model');
 
 const Lesson = sequelize.define('Lesson', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -27,5 +28,8 @@ const Lesson = sequelize.define('Lesson', {
     tableName: 'lessons',
     timestamps: true
 });
+
+Lesson.hasMany(LessonProgress, { foreignKey: 'lessonId', as: 'progress' });
+LessonProgress.belongsTo(Lesson, { foreignKey: 'lessonId' });
 
 module.exports = Lesson;

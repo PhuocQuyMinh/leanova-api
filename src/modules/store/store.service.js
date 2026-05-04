@@ -8,6 +8,8 @@ const CartItem = require('./cart_item.model');
 const Enrollment = require('./enrollment.model');
 const sequelize = require('../../core/database/init.mysql');
 const AppError = require('../../core/utils/appError');
+const LessonProgress = require('./lesson_progress.model');
+
 
 
 // 1. Cửa hàng: Lấy danh sách khóa học đang bán
@@ -151,4 +153,67 @@ exports.getEnrolledCourseDetail = async (userId, courseId) => {
     });
 
     return course;
+};
+
+
+// 8. Đánh dấu hoàn thành bài học và Tính lại tiến độ
+exports.toggleLessonComplete = async (userId, courseId, lessonId) => {
+    // 1. Kiểm tra quyền sở hữu
+    const enrollment = await Enrollment.findOne({ where: { userId, courseId } });
+    if (!enrollment) throw new AppError('Bạn chưa sở hữu khóa học này!', 403);
+
+    // 2. Tìm hoặc tạo mới bản ghi tiến độ cho bài học này
+    let [progress, created] = await LessonProgress.findOrCreate({
+        where: { userId, lessonId },
+        defaults: { isCompleted: true }
+    });
+
+    // Nếu đã có sẵn thì đổi trạng thái (chưa xong -> xong, hoặc ngược lại)
+    if (!created) {
+        progress.isCompleted = !progress.isCompleted;
+        await progress.save();
+    }
+
+    // 3. THUẬT TOÁN TÍNH PHẦN TRĂM (%)
+    // Lấy toàn bộ bài học của khóa học này để đếm
+    const course = await Course.findByPk(courseId, {
+        include: [{
+            model: Section, as: 'sections',
+            include: [{ model: Lesson, as: 'lessons', attributes: ['id'] }]
+        }]
+    });
+
+    let totalLessons = 0;
+    const lessonIds = []; // Mảng chứa ID của tất cả bài học trong khóa
+
+    course.sections.forEach(section => {
+        totalLessons += section.lessons.length;
+        section.lessons.forEach(lesson => lessonIds.push(lesson.id));
+    });
+
+    // Nếu khóa học chưa có bài học nào
+    if (totalLessons === 0) return { message: 'Đã cập nhật trạng thái!', progressPercent: 0 };
+
+    // Đếm số bài học user đã hoàn thành trong mảng lessonIds kia
+    const completedLessons = await LessonProgress.count({
+        where: {
+            userId: userId,
+            lessonId: lessonIds,
+            isCompleted: true
+        }
+    });
+
+    // Tính % và làm tròn
+    const progressPercent = Math.round((completedLessons / totalLessons) * 100);
+
+    // Lưu lại % vào bảng Ghi danh (Enrollment)
+    enrollment.progressPercent = progressPercent;
+    await enrollment.save();
+
+    return {
+        message: progress.isCompleted ? 'Đã hoàn thành bài học!' : 'Đã bỏ đánh dấu hoàn thành!',
+        completedLessons,
+        totalLessons,
+        progressPercent
+    };
 };

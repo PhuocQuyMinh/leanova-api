@@ -10,6 +10,7 @@ const Quiz = require('./modules/courses/quiz.model');
 const InstructorRequest = require('./modules/moderation/instructor_request.model');
 const CartItem = require('./modules/store/cart_item.model');
 const Enrollment = require('./modules/store/enrollment.model');
+const LessonProgress = require('./modules/store/lesson_progress.model');
 
 const app = require('./app');
 
