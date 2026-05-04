@@ -18,6 +18,7 @@ const authRoutes = require('./modules/auth/auth.routes');
 const userRoutes = require('./modules/users/user.routes');
 const courseRoutes = require('./modules/courses/course.routes');
 const moderationRoutes = require('./modules/moderation/moderation.routes');
+const storeRoutes = require('./modules/store/store.routes');
 
 // 2. Routes
 app.get('/api/healthcheck', (req, res) => {
@@ -33,6 +34,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 
 app.use('/api/moderation', moderationRoutes);
+
+app.use('/api/store', storeRoutes);
 
 // 3. Xử lý đường dẫn không tồn tại (404)
 app.use((req, res, next) => {

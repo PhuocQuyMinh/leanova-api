@@ -43,8 +43,10 @@ const Course = sequelize.define('Course', {
 
 const Section = require('./section.model');
 const Lesson = require('./lesson.model');
-const Attachment = require('./attachment.model'); // MỚI
-const Quiz = require('./quiz.model');             // MỚI
+const Attachment = require('./attachment.model');
+const Quiz = require('./quiz.model');
+const CartItem = require('../store/cart_item.model');
+const Enrollment = require('../store/enrollment.model');
 
 // THIẾT LẬP QUAN HỆ (1 Giảng viên có nhiều Khóa học)
 // Cột instructorId sẽ tự động được thêm vào bảng courses
@@ -67,5 +69,11 @@ Quiz.belongsTo(Section, { foreignKey: 'sectionId' });
 // 5. Lesson - Attachment (1 Bài học có thể đính kèm nhiều File)
 Lesson.hasMany(Attachment, { foreignKey: 'lessonId', as: 'attachments', onDelete: 'CASCADE' });
 Attachment.belongsTo(Lesson, { foreignKey: 'lessonId' });
+
+Course.hasMany(CartItem, { foreignKey: 'courseId' });
+CartItem.belongsTo(Course, { foreignKey: 'courseId' });
+
+Course.hasMany(Enrollment, { foreignKey: 'courseId' });
+Enrollment.belongsTo(Course, { foreignKey: 'courseId' });
 
 module.exports = Course;

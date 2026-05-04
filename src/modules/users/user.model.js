@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const sequelize = require('../../core/database/init.mysql');
 
 const InstructorRequest = require('../moderation/instructor_request.model');
+const CartItem = require('../store/cart_item.model');
+const Enrollment = require('../store/enrollment.model');
 
 const User = sequelize.define('User', {
     id: {
@@ -62,5 +64,11 @@ User.prototype.correctPassword = async function (candidatePassword, userPassword
 // Một User có thể nộp đơn nhiều lần (nếu bị rớt), nhưng mỗi lần duyệt 1 đơn
 User.hasMany(InstructorRequest, { foreignKey: 'userId', as: 'instructorRequests' });
 InstructorRequest.belongsTo(User, { foreignKey: 'userId', as: 'applicant' });
+
+User.hasMany(CartItem, { foreignKey: 'userId', as: 'cart' });
+CartItem.belongsTo(User, { foreignKey: 'userId' });
+
+User.hasMany(Enrollment, { foreignKey: 'userId', as: 'enrollments' });
+Enrollment.belongsTo(User, { foreignKey: 'userId' });
 
 module.exports = User;

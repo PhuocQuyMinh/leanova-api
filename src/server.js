@@ -8,6 +8,8 @@ const Lesson = require('./modules/courses/lesson.model');
 const Attachment = require('./modules/courses/attachment.model');
 const Quiz = require('./modules/courses/quiz.model');
 const InstructorRequest = require('./modules/moderation/instructor_request.model');
+const CartItem = require('./modules/store/cart_item.model');
+const Enrollment = require('./modules/store/enrollment.model');
 
 const app = require('./app');
 
