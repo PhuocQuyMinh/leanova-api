@@ -26,15 +26,41 @@ const Course = sequelize.define('Course', {
     status: {
         type: DataTypes.ENUM('Pending', 'Published', 'Rejected'),
         defaultValue: 'Pending' // Vừa tạo xong sẽ ở trạng thái chờ Admin/Mod duyệt
-    }
+    },
+    coverImage: {
+        type: DataTypes.STRING,
+        allowNull: true // Ảnh bìa có thể cập nhật sau
+    },
 }, {
     tableName: 'courses',
     timestamps: true
 });
 
+const Section = require('./section.model');
+const Lesson = require('./lesson.model');
+const Attachment = require('./attachment.model'); // MỚI
+const Quiz = require('./quiz.model');             // MỚI
+
 // THIẾT LẬP QUAN HỆ (1 Giảng viên có nhiều Khóa học)
 // Cột instructorId sẽ tự động được thêm vào bảng courses
 User.hasMany(Course, { foreignKey: 'instructorId', as: 'courses' });
 Course.belongsTo(User, { foreignKey: 'instructorId', as: 'instructor' });
+
+// 2. Course - Section
+Course.hasMany(Section, { foreignKey: 'courseId', as: 'sections', onDelete: 'CASCADE' });
+Section.belongsTo(Course, { foreignKey: 'courseId' });
+
+
+// 3. Section - Lesson
+Section.hasMany(Lesson, { foreignKey: 'sectionId', as: 'lessons', onDelete: 'CASCADE' });
+Lesson.belongsTo(Section, { foreignKey: 'sectionId' });
+
+// 4. Section - Quiz (Một chương có thể có nhiều bài Test kiểm tra)
+Section.hasMany(Quiz, { foreignKey: 'sectionId', as: 'quizzes', onDelete: 'CASCADE' });
+Quiz.belongsTo(Section, { foreignKey: 'sectionId' });
+
+// 5. Lesson - Attachment (1 Bài học có thể đính kèm nhiều File)
+Lesson.hasMany(Attachment, { foreignKey: 'lessonId', as: 'attachments', onDelete: 'CASCADE' });
+Attachment.belongsTo(Lesson, { foreignKey: 'lessonId' });
 
 module.exports = Course;
