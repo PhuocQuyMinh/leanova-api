@@ -6,6 +6,7 @@ const InstructorRequest = require('../moderation/instructor_request.model');
 const CartItem = require('../store/cart_item.model');
 const Enrollment = require('../store/enrollment.model');
 const LessonProgress = require('../store/lesson_progress.model');
+const Review = require('../courses/review.model');
 
 const User = sequelize.define('User', {
     id: {
@@ -74,5 +75,8 @@ Enrollment.belongsTo(User, { foreignKey: 'userId' });
 
 User.hasMany(LessonProgress, { foreignKey: 'userId' });
 LessonProgress.belongsTo(User, { foreignKey: 'userId' });
+
+User.hasMany(Review, { foreignKey: 'userId', as: 'reviews' });
+Review.belongsTo(User, { foreignKey: 'userId' });
 
 module.exports = User;

@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../core/database/init.mysql');
-const User = require('../users/user.model'); // Import model User để nối bảng
+const User = require('../users/user.model');
 
 const Course = sequelize.define('Course', {
     id: {
@@ -55,6 +55,7 @@ const Attachment = require('./attachment.model');
 const Quiz = require('./quiz.model');
 const CartItem = require('../store/cart_item.model');
 const Enrollment = require('../store/enrollment.model');
+const Review = require('./review.model');
 
 // THIẾT LẬP QUAN HỆ (1 Giảng viên có nhiều Khóa học)
 // Cột instructorId sẽ tự động được thêm vào bảng courses
@@ -83,5 +84,8 @@ CartItem.belongsTo(Course, { foreignKey: 'courseId' });
 
 Course.hasMany(Enrollment, { foreignKey: 'courseId' });
 Enrollment.belongsTo(Course, { foreignKey: 'courseId' });
+
+Course.hasMany(Review, { foreignKey: 'courseId', as: 'reviews' });
+Review.belongsTo(Course, { foreignKey: 'courseId' });
 
 module.exports = Course;
