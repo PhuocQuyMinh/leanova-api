@@ -27,6 +27,11 @@ const Course = sequelize.define('Course', {
         type: DataTypes.ENUM('Pending', 'Published', 'Rejected'),
         defaultValue: 'Pending' // Vừa tạo xong sẽ ở trạng thái chờ Admin/Mod duyệt
     },
+    rejectMessage: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Lý do kiểm duyệt viên từ chối khóa học này'
+    },
     coverImage: {
         type: DataTypes.STRING,
         allowNull: true // Ảnh bìa có thể cập nhật sau

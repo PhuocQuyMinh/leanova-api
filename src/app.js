@@ -17,7 +17,7 @@ app.use(morgan('dev')); // Log request ra console
 const authRoutes = require('./modules/auth/auth.routes');
 const userRoutes = require('./modules/users/user.routes');
 const courseRoutes = require('./modules/courses/course.routes');
-
+const moderationRoutes = require('./modules/moderation/moderation.routes');
 
 // 2. Routes
 app.get('/api/healthcheck', (req, res) => {
@@ -31,6 +31,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
 app.use('/api/courses', courseRoutes);
+
+app.use('/api/moderation', moderationRoutes);
 
 // 3. Xử lý đường dẫn không tồn tại (404)
 app.use((req, res, next) => {

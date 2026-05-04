@@ -7,6 +7,7 @@ const Section = require('./modules/courses/section.model');
 const Lesson = require('./modules/courses/lesson.model');
 const Attachment = require('./modules/courses/attachment.model');
 const Quiz = require('./modules/courses/quiz.model');
+const InstructorRequest = require('./modules/moderation/instructor_request.model');
 
 const app = require('./app');
 

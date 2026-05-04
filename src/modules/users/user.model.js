@@ -2,6 +2,8 @@ const { DataTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const sequelize = require('../../core/database/init.mysql');
 
+const InstructorRequest = require('../moderation/instructor_request.model');
+
 const User = sequelize.define('User', {
     id: {
         type: DataTypes.INTEGER,
@@ -56,5 +58,9 @@ const User = sequelize.define('User', {
 User.prototype.correctPassword = async function (candidatePassword, userPassword) {
     return await bcrypt.compare(candidatePassword, userPassword);
 };
+
+// Một User có thể nộp đơn nhiều lần (nếu bị rớt), nhưng mỗi lần duyệt 1 đơn
+User.hasMany(InstructorRequest, { foreignKey: 'userId', as: 'instructorRequests' });
+InstructorRequest.belongsTo(User, { foreignKey: 'userId', as: 'applicant' });
 
 module.exports = User;
