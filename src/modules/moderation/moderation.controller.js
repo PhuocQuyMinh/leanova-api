@@ -29,3 +29,12 @@ exports.reviewInstructorRequest = catchAsync(async (req, res, next) => {
     const request = await moderationService.reviewInstructorRequest(req.params.requestId, action, rejectReason);
     res.status(200).json({ status: 'success', message: `Đã xử lý đơn thành công!`, data: request });
 });
+
+exports.getCourseDetail = catchAsync(async (req, res, next) => {
+    const course = await moderationService.getCourseDetailForMod(req.params.courseId);
+
+    res.status(200).json({
+        status: 'success',
+        data: { course }
+    });
+});

@@ -5,6 +5,8 @@ const User = require('../users/user.model');
 const InstructorRequest = require('./instructor_request.model');
 const sequelize = require('../../core/database/init.mysql');
 const AppError = require('../../core/utils/appError');
+const Attachment = require('../courses/attachment.model');
+const Quiz = require('../courses/quiz.model');
 
 // ==========================================
 // LUỒNG 1: DUYỆT KHÓA HỌC
@@ -40,6 +42,42 @@ exports.reviewCourse = async (courseId, action, rejectMessage = '') => {
     }
 
     await course.save();
+    return course;
+};
+
+// 1.1.5 Xem chi tiết toàn bộ nội dung khóa học (Dành cho Mod duyệt bài)
+exports.getCourseDetailForMod = async (courseId) => {
+    const course = await Course.findByPk(courseId, {
+        include: [
+            {
+                model: User,
+                as: 'instructor',
+                attributes: ['id', 'fullName', 'email']
+            },
+            {
+                model: Section,
+                as: 'sections',
+                include: [
+                    {
+                        model: Lesson,
+                        as: 'lessons',
+                        include: [{ model: Attachment, as: 'attachments' }] // Lấy cả tài liệu đính kèm
+                    },
+                    {
+                        model: Quiz,
+                        as: 'quizzes'
+                    }
+                ]
+            }
+        ],
+        order: [
+            [{ model: Section, as: 'sections' }, 'orderIndex', 'ASC'],
+            [{ model: Section, as: 'sections' }, { model: Lesson, as: 'lessons' }, 'orderIndex', 'ASC']
+        ]
+    });
+
+    if (!course) throw new AppError('Không tìm thấy khóa học này!', 404);
+
     return course;
 };
 

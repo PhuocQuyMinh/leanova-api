@@ -61,6 +61,13 @@ exports.updateCourse = async (courseId, instructorId, updateData, file) => {
         }
     }
 
+    // Nếu khóa học đang bị "Từ chối" mà Giảng viên vào sửa lại (khắc phục lỗi)
+    // Hệ thống tự động chuyển trạng thái thành "Chờ duyệt" và xóa lời chê cũ đi
+    if (course.status === 'Rejected') {
+        updateData.status = 'Pending';
+        updateData.rejectMessage = null;
+    }
+
     await course.update(updateData);
     return course;
 };

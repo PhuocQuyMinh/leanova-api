@@ -19,6 +19,7 @@ router.put('/instructor-requests/:requestId/review', moderationController.review
 
 // Quản lý Khóa học
 router.get('/pending-courses', moderationController.getPendingCourses);
+router.get('/courses/:courseId', moderationController.getCourseDetail);
 router.put('/courses/:courseId/review', moderationController.reviewCourse);
 
 module.exports = router;
