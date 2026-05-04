@@ -5,12 +5,16 @@ const User = require('./modules/users/user.model');      // <-- Gọi Model User
 const Course = require('./modules/courses/course.model'); // Thêm dòng này để Sequelize biết và tạo bảng
 const Section = require('./modules/courses/section.model');
 const Lesson = require('./modules/courses/lesson.model');
+const QuizQuestion = require('./modules/courses/quiz_question.model');
 const Attachment = require('./modules/courses/attachment.model');
 const Quiz = require('./modules/courses/quiz.model');
 const InstructorRequest = require('./modules/moderation/instructor_request.model');
 const CartItem = require('./modules/store/cart_item.model');
 const Enrollment = require('./modules/store/enrollment.model');
 const LessonProgress = require('./modules/store/lesson_progress.model');
+const QuizAttempt = require('./modules/store/quiz_attempt.model');
+
+
 
 const app = require('./app');
 

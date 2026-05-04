@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../../core/database/init.mysql');
+const QuizQuestion = require('./quiz_question.model');
 
 const Quiz = sequelize.define('Quiz', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -17,5 +18,8 @@ const Quiz = sequelize.define('Quiz', {
     tableName: 'quizzes',
     timestamps: true
 });
+
+Quiz.hasMany(QuizQuestion, { foreignKey: 'quizId', as: 'questions' });
+QuizQuestion.belongsTo(Quiz, { foreignKey: 'quizId' });
 
 module.exports = Quiz;

@@ -36,6 +36,14 @@ const Course = sequelize.define('Course', {
         type: DataTypes.STRING,
         allowNull: true // Ảnh bìa có thể cập nhật sau
     },
+    averageRating: {
+        type: DataTypes.FLOAT,
+        defaultValue: 0.0
+    },
+    reviewCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    }
 }, {
     tableName: 'courses',
     timestamps: true

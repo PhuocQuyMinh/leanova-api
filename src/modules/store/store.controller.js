@@ -43,3 +43,9 @@ exports.toggleLessonComplete = catchAsync(async (req, res, next) => {
 
     res.status(200).json({ status: 'success', data: result });
 });
+
+exports.submitQuiz = catchAsync(async (req, res, next) => {
+    // req.body.answers là mảng đáp án
+    const result = await storeService.submitQuiz(req.user.id, req.params.quizId, req.body.answers);
+    res.status(200).json({ status: 'success', data: result });
+});

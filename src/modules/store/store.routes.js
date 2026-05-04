@@ -26,4 +26,7 @@ router.get('/my-learning/:courseId', storeController.getEnrolledCourseDetail);
 // [MỚI] API Đánh dấu hoàn thành bài học
 router.put('/my-learning/:courseId/lessons/:lessonId/complete', storeController.toggleLessonComplete);
 
+// [MỚI] Nộp bài kiểm tra trắc nghiệm
+router.post('/my-learning/quizzes/:quizId/submit', storeController.submitQuiz);
+
 module.exports = router;

@@ -9,8 +9,8 @@ const Enrollment = require('./enrollment.model');
 const sequelize = require('../../core/database/init.mysql');
 const AppError = require('../../core/utils/appError');
 const LessonProgress = require('./lesson_progress.model');
-
-
+const QuizQuestion = require('../courses/quiz_question.model');
+const QuizAttempt = require('./quiz_attempt.model');
 
 // 1. Cửa hàng: Lấy danh sách khóa học đang bán
 exports.getPublishedCourses = async () => {
@@ -215,5 +215,60 @@ exports.toggleLessonComplete = async (userId, courseId, lessonId) => {
         completedLessons,
         totalLessons,
         progressPercent
+    };
+};
+
+// 9. Nộp bài và Tự động chấm điểm
+exports.submitQuiz = async (userId, quizId, userAnswers) => {
+    // userAnswers là mảng client gửi lên: [{ questionId: 1, selectedChoiceId: 2 }, ...]
+
+    const quiz = await Quiz.findByPk(quizId, {
+        include: [{ model: QuizQuestion, as: 'questions' }]
+    });
+
+    if (!quiz) throw new AppError('Không tìm thấy bài kiểm tra này!', 404);
+    if (quiz.questions.length === 0) throw new AppError('Bài kiểm tra này chưa có câu hỏi nào!', 400);
+
+    let correctCount = 0;
+    const totalQuestions = quiz.questions.length;
+
+    // THUẬT TOÁN CHẤM ĐIỂM
+    quiz.questions.forEach(question => {
+        // Tìm câu trả lời của user cho câu hỏi này
+        const userAnswer = userAnswers.find(ans => ans.questionId === question.id);
+
+        if (userAnswer) {
+            // Lấy danh sách đáp án từ DB
+            const choices = typeof question.choices === 'string' ? JSON.parse(question.choices) : question.choices;
+
+            // Tìm đáp án đúng từ DB
+            const correctChoice = choices.find(c => c.isCorrect === true);
+
+            // So khớp đáp án user chọn với đáp án đúng
+            if (correctChoice && correctChoice.id === userAnswer.selectedChoiceId) {
+                correctCount++;
+            }
+        }
+    });
+
+    // Tính điểm và xét điều kiện qua môn
+    const scorePercent = Math.round((correctCount / totalQuestions) * 100);
+    const isPassed = scorePercent >= quiz.passingScorePercent;
+
+    // Lưu lại lịch sử làm bài
+    const attempt = await QuizAttempt.create({
+        userId,
+        quizId,
+        scorePercent,
+        isPassed
+    });
+
+    return {
+        message: isPassed ? 'Chúc mừng! Bạn đã qua bài kiểm tra.' : 'Rất tiếc, bạn cần cố gắng hơn!',
+        correctCount,
+        totalQuestions,
+        scorePercent,
+        isPassed,
+        passingScore: quiz.passingScorePercent
     };
 };
