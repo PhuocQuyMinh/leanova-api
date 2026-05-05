@@ -60,8 +60,10 @@ exports.submitQuiz = catchAsync(async (req, res, next) => {
 // Thêm hàm xử lý Return
 exports.vnpayReturn = catchAsync(async (req, res, next) => {
     const result = await storeService.vnpayReturn(req.query); // VNPay trả data qua query string
-
-    // Thường trong thực tế, đoạn này sẽ dùng res.redirect() để đá học viên về lại trang Frontend (Vue/React)
-    // Nhưng vì đang test API, ta cứ trả JSON ra xem trước 
-    res.status(200).json({ status: 'success', data: result });
+    if (result.code == "00") {
+        return res.redirect('http://localhost:3000/payment/result?status=success');
+    }
+    else {
+        return res.redirect('http://localhost:3000/payment/result?status=failed');
+    }
 });
