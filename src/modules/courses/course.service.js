@@ -1,5 +1,5 @@
 const AppError = require('../../core/utils/appError');
-
+const Category = require('../categories/category.model');
 const Course = require('./course.model');
 const Section = require('./section.model');
 const Lesson = require('./lesson.model');
@@ -17,10 +17,27 @@ cloudinary.config({
 
 // 1. Logic tạo khóa học mới
 exports.createCourse = async (courseData, instructorId) => {
+
+    // 1. Kiểm tra xem giảng viên đã gửi id danh mục lên chưa
+    if (!courseData.categoryId) {
+        throw new AppError('Vui lòng chọn danh mục cho khóa học!', 400);
+    }
+
+    // 2. Kiểm tra xem danh mục đó có tồn tại trong hệ thống không
+    const category = await Category.findByPk(courseData.categoryId);
+    if (!category) {
+        throw new AppError('Danh mục đã chọn không tồn tại!', 404);
+    }
+
+    if (category.parentId === null) {
+        throw new AppError('Vui lòng chọn danh mục con chi tiết thay vì danh mục gốc!', 400);
+    }
+
     const newCourse = await Course.create({
         title: courseData.title,
         description: courseData.description,
         price: courseData.price,
+        categoryId: courseData.categoryId,
         instructorId: instructorId // Lấy ID của người đang đăng nhập gắn vào khóa học
     });
 
