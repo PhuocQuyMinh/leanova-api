@@ -56,6 +56,7 @@ const Quiz = require('./quiz.model');
 const CartItem = require('../store/cart_item.model');
 const Enrollment = require('../store/enrollment.model');
 const Review = require('./review.model');
+const Category = require('../categories/category.model.js');
 
 // THIẾT LẬP QUAN HỆ (1 Giảng viên có nhiều Khóa học)
 // Cột instructorId sẽ tự động được thêm vào bảng courses
@@ -87,5 +88,8 @@ Enrollment.belongsTo(Course, { foreignKey: 'courseId' });
 
 Course.hasMany(Review, { foreignKey: 'courseId', as: 'reviews' });
 Review.belongsTo(Course, { foreignKey: 'courseId' });
+
+Category.hasMany(Course, { foreignKey: 'categoryId', as: 'courses' });
+Course.belongsTo(Category, { foreignKey: 'categoryId', as: 'category' });
 
 module.exports = Course;
