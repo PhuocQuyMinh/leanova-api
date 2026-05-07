@@ -39,4 +39,7 @@ router.put('/attachments/:attachmentId', upload.single('file'), courseController
 // Lưu lại vị trí khi kéo thả (Kéo thả áp dụng cho toàn bộ khóa học)
 router.patch('/:courseId/curriculum/reorder', courseController.reorderCurriculum);
 
+// Biên tập Nội dung Bài Trắc nghiệm (Quiz)
+router.post('/quizzes/:quizId/questions', courseController.addQuizQuestion);
+
 module.exports = router;

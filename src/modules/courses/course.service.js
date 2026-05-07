@@ -5,6 +5,8 @@ const Section = require('./section.model');
 const Lesson = require('./lesson.model');
 const Attachment = require('./attachment.model');
 const Quiz = require('./quiz.model');
+const QuizQuestion = require('./quiz_question.model');
+
 
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
@@ -332,4 +334,43 @@ exports.reorderCurriculum = async (courseId, instructorId, reorderData) => {
         await transaction.rollback();
         throw new AppError('Lỗi khi lưu thứ tự chương trình học, vui lòng thử lại!', 500);
     }
+};
+
+// ==========================================
+// 13. Thêm Câu hỏi vào Bài Trắc nghiệm (Quiz)
+// ==========================================
+exports.addQuizQuestion = async (quizId, instructorId, questionData) => {
+    // 1. Tìm Quiz
+    const quiz = await Quiz.findByPk(quizId);
+    if (!quiz) throw new AppError('Không tìm thấy bài trắc nghiệm này!', 404);
+
+    // 2. Kiểm tra bảo mật IDOR (Đi ngược gia phả: Quiz -> Lesson -> Section -> Course)
+    // Dựa trên thiết kế mới của bạn: Quiz nằm trong Lesson
+    const lesson = await Lesson.findByPk(quiz.lessonId);
+    if (!lesson) throw new AppError('Bài học chứa trắc nghiệm không tồn tại!', 404);
+
+    const section = await Section.findByPk(lesson.sectionId);
+    await checkCourseOwnership(section.courseId, instructorId);
+
+    // 3. Validate dữ liệu Đáp án (Choices)
+    // Đảm bảo choices là một mảng và có ít nhất 2 đáp án
+    if (!questionData.choices || !Array.isArray(questionData.choices) || questionData.choices.length < 2) {
+        throw new AppError('Câu hỏi phải có ít nhất 2 đáp án (Ví dụ: Đúng/Sai hoặc A/B/C/D)!', 400);
+    }
+
+    // Đảm bảo trong mảng đáp án, phải có ít nhất 1 đáp án được đánh dấu là Đúng (isCorrect: true)
+    const hasCorrectAnswer = questionData.choices.some(choice => choice.isCorrect === true);
+    if (!hasCorrectAnswer) {
+        throw new AppError('Vui lòng chọn ít nhất một đáp án đúng cho câu hỏi này!', 400);
+    }
+
+    // 4. Lưu vào Database
+    const newQuestion = await QuizQuestion.create({
+        quizId: quiz.id,
+        questionText: questionData.questionText,
+        choices: questionData.choices, // Sequelize sẽ tự chuyển mảng Object này thành chuỗi JSON để lưu MySQL
+        explanation: questionData.explanation
+    });
+
+    return newQuestion;
 };

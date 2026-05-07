@@ -97,12 +97,23 @@ exports.addQuiz = catchAsync(async (req, res, next) => {
     });
 });
 
-// [MỚI] Lưu thứ tự kéo thả Khung chương trình
+// Lưu thứ tự kéo thả Khung chương trình
 exports.reorderCurriculum = catchAsync(async (req, res, next) => {
     await courseService.reorderCurriculum(req.params.courseId, req.user.id, req.body);
 
     res.status(200).json({
         status: 'success',
         message: 'Đã lưu thứ tự chương trình học!'
+    });
+});
+
+// Thêm Câu hỏi trắc nghiệm
+exports.addQuizQuestion = catchAsync(async (req, res, next) => {
+    const newQuestion = await courseService.addQuizQuestion(req.params.quizId, req.user.id, req.body);
+
+    res.status(201).json({
+        status: 'success',
+        message: 'Thêm câu hỏi trắc nghiệm thành công!',
+        data: { question: newQuestion }
     });
 });
