@@ -36,4 +36,7 @@ router.put('/lessons/:lessonId', upload.single('video'), courseController.update
 router.post('/lessons/:lessonId/attachments', upload.single('file'), courseController.addAttachment);
 router.put('/attachments/:attachmentId', upload.single('file'), courseController.updateAttachment);
 
+// Lưu lại vị trí khi kéo thả (Kéo thả áp dụng cho toàn bộ khóa học)
+router.patch('/:courseId/curriculum/reorder', courseController.reorderCurriculum);
+
 module.exports = router;

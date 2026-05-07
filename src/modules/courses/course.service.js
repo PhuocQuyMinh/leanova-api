@@ -9,6 +9,8 @@ const Quiz = require('./quiz.model');
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
 
+const sequelize = require('../../core/database/init.mysql');
+
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
@@ -282,4 +284,52 @@ exports.addQuiz = async (sectionId, instructorId, quizData) => {
         sectionId: section.id
     });
     return newQuiz;
+};
+
+// ==========================================
+// 11. Cập nhật thứ tự (Reorder) Chương và Bài học
+// ==========================================
+exports.reorderCurriculum = async (courseId, instructorId, reorderData) => {
+    // 1. Kiểm tra bảo mật IDOR
+    await checkCourseOwnership(courseId, instructorId);
+
+    // reorderData sẽ có dạng: { sections: [...], lessons: [...] }
+    const { sections, lessons } = reorderData;
+
+    // 2. Khởi tạo Transaction
+    const transaction = await sequelize.transaction();
+
+    try {
+        // 3. Cập nhật thứ tự Chương (Nếu có sự thay đổi)
+        if (sections && sections.length > 0) {
+            const sectionPromises = sections.map(sec =>
+                Section.update(
+                    { orderIndex: sec.orderIndex },
+                    { where: { id: sec.id, courseId: courseId }, transaction }
+                )
+            );
+            await Promise.all(sectionPromises); // Chạy song song tất cả lệnh update
+        }
+
+        // 4. Cập nhật thứ tự (và có thể là chuyển qua lại giữa các Chương) của Bài học
+        if (lessons && lessons.length > 0) {
+            const lessonPromises = lessons.map(les =>
+                Lesson.update(
+                    // Lỡ Giảng viên kéo thả bài học từ Chương 1 sang Chương 2, thì sectionId cũng bị thay đổi
+                    { orderIndex: les.orderIndex, sectionId: les.sectionId },
+                    { where: { id: les.id }, transaction }
+                )
+            );
+            await Promise.all(lessonPromises);
+        }
+
+        // 5. Nếu mọi thứ trơn tru, lưu lại toàn bộ vào Database
+        await transaction.commit();
+        return true;
+
+    } catch (error) {
+        // Nếu có 1 lỗi nhỏ xảy ra (vd: id không tồn tại), hủy bỏ toàn bộ quá trình vừa làm
+        await transaction.rollback();
+        throw new AppError('Lỗi khi lưu thứ tự chương trình học, vui lòng thử lại!', 500);
+    }
 };
