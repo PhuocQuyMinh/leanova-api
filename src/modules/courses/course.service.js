@@ -15,6 +15,19 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// HÀM HELPER: BẢO VỆ LỖ HỔNG IDOR (BOLA)
+// ==========================================
+const checkCourseOwnership = async (courseId, instructorId) => {
+    const course = await Course.findByPk(courseId);
+    if (!course) throw new AppError('Không tìm thấy khóa học!', 404);
+
+    // So sánh ID của người đang request với ID của chủ khóa học (Ép kiểu string để so sánh an toàn)
+    if (course.instructorId.toString() !== instructorId.toString()) {
+        throw new AppError('Lỗi bảo mật: Bạn không có quyền can thiệp vào dữ liệu của giảng viên khác!', 403); // HTTP 403: Forbidden
+    }
+    return course;
+};
+
 // 1. Logic tạo khóa học mới
 exports.createCourse = async (courseData, instructorId) => {
 
@@ -103,26 +116,101 @@ exports.addSection = async (courseId, instructorId, sectionData) => {
     return newSection;
 };
 
-// [MỚI] Thêm Bài học (Chỉ chứa Video hoặc Text)
-exports.addLesson = async (sectionId, lessonData) => {
+exports.updateSection = async (sectionId, instructorId, sectionData) => {
     const section = await Section.findByPk(sectionId);
     if (!section) throw new AppError('Không tìm thấy chương này!', 404);
 
-    const newLesson = await Lesson.create({
+    // [BẢO MẬT] Kiểm tra quyền
+    await checkCourseOwnership(section.courseId, instructorId);
+
+    await section.update({
+        title: sectionData.title || section.title,
+        orderIndex: sectionData.orderIndex || section.orderIndex
+    });
+    return section;
+};
+
+// Thêm Bài học (ĐÃ CẬP NHẬT: Hỗ trợ upload Video)
+exports.addLesson = async (sectionId, instructorId, lessonData, file) => {
+    const section = await Section.findByPk(sectionId);
+    if (!section) throw new AppError('Không tìm thấy chương này!', 404);
+
+    // [BẢO MẬT] Kiểm tra quyền
+    await checkCourseOwnership(section.courseId, instructorId);
+
+
+    let videoUrl = lessonData.videoUrl; // Giữ lại dự phòng nếu lấy link Youtube ngoài
+
+    // Nếu bài học dạng Video và Giảng viên có đính kèm file MP4
+    if (lessonData.lessonType === 'Video' && file) {
+        try {
+            const result = await cloudinary.uploader.upload(file.path, {
+                folder: 'leanova_courses/videos',
+                resource_type: 'video' // Ép kiểu để Cloudinary biết đây là video
+            });
+            videoUrl = result.secure_url;
+            fs.unlinkSync(file.path);
+        } catch (error) {
+            if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            throw new AppError('Lỗi khi tải video lên hệ thống', 500);
+        }
+    }
+
+    return await Lesson.create({
         title: lessonData.title,
-        lessonType: lessonData.lessonType, // 'Video' hoặc 'Article'
-        videoUrl: lessonData.videoUrl,
+        lessonType: lessonData.lessonType,
+        videoUrl: videoUrl,
         articleContent: lessonData.articleContent,
         orderIndex: lessonData.orderIndex,
         sectionId: section.id
     });
-    return newLesson;
+};
+
+exports.updateLesson = async (lessonId, instructorId, lessonData, file) => {
+    const lesson = await Lesson.findByPk(lessonId);
+    if (!lesson) throw new AppError('Không tìm thấy bài học này!', 404);
+
+    // [BẢO MẬT] Phải truy ngược từ Bài học -> Chương -> Khóa học để check quyền
+    const section = await Section.findByPk(lesson.sectionId);
+    await checkCourseOwnership(section.courseId, instructorId);
+
+    let videoUrl = lesson.videoUrl;
+
+    if (file) {
+        try {
+            const result = await cloudinary.uploader.upload(file.path, {
+                folder: 'leanova_courses/videos',
+                resource_type: 'video'
+            });
+            videoUrl = result.secure_url;
+            fs.unlinkSync(file.path);
+        } catch (error) {
+            if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            throw new AppError('Lỗi khi tải video mới lên hệ thống', 500);
+        }
+    } else if (lessonData.videoUrl) {
+        videoUrl = lessonData.videoUrl;
+    }
+
+    await lesson.update({
+        title: lessonData.title || lesson.title,
+        lessonType: lessonData.lessonType || lesson.lessonType,
+        videoUrl: videoUrl,
+        articleContent: lessonData.articleContent || lesson.articleContent,
+        orderIndex: lessonData.orderIndex || lesson.orderIndex
+    });
+    return lesson;
 };
 
 // [MỚI] Thêm Tài liệu đính kèm (Upload PDF, ZIP)
-exports.addAttachment = async (lessonId, attachmentData, file) => {
+exports.addAttachment = async (lessonId, instructorId, attachmentData, file) => {
     const lesson = await Lesson.findByPk(lessonId);
     if (!lesson) throw new AppError('Không tìm thấy bài học này!', 404);
+
+    // [BẢO MẬT]
+    const section = await Section.findByPk(lesson.sectionId);
+    await checkCourseOwnership(section.courseId, instructorId);
+
     if (!file) throw new AppError('Vui lòng chọn file để đính kèm!', 400);
 
     let fileUrl = '';
@@ -148,10 +236,44 @@ exports.addAttachment = async (lessonId, attachmentData, file) => {
     return newAttachment;
 };
 
+exports.updateAttachment = async (attachmentId, instructorId, attachmentData, file) => {
+    const attachment = await Attachment.findByPk(attachmentId);
+    if (!attachment) throw new AppError('Không tìm thấy tài liệu này!', 404);
+
+    // [BẢO MẬT] Truy ngược: Attachment -> Lesson -> Section -> Course
+    const lesson = await Lesson.findByPk(attachment.lessonId);
+    const section = await Section.findByPk(lesson.sectionId);
+    await checkCourseOwnership(section.courseId, instructorId);
+
+    let fileUrl = attachment.fileUrl;
+    let fileName = attachmentData.fileName || attachment.fileName;
+
+    if (file) {
+        try {
+            const result = await cloudinary.uploader.upload(file.path, {
+                folder: 'leanova_courses/attachments',
+                resource_type: 'auto'
+            });
+            fileUrl = result.secure_url;
+            fileName = attachmentData.fileName || file.originalname;
+            fs.unlinkSync(file.path);
+        } catch (error) {
+            if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            throw new AppError('Lỗi khi cập nhật tài liệu mới', 500);
+        }
+    }
+
+    await attachment.update({ fileName, fileUrl });
+    return attachment;
+};
+
 // [MỚI] Thêm Bài Quiz vào Chương
-exports.addQuiz = async (sectionId, quizData) => {
+exports.addQuiz = async (sectionId, instructorId, quizData) => {
     const section = await Section.findByPk(sectionId);
     if (!section) throw new AppError('Không tìm thấy chương này!', 404);
+
+    // [BẢO MẬT]
+    await checkCourseOwnership(section.courseId, instructorId);
 
     const newQuiz = await Quiz.create({
         title: quizData.title,

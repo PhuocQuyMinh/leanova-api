@@ -23,14 +23,17 @@ router.get('/my-courses', courseController.getMyCourses);
 router.put('/:id', upload.single('coverImage'), courseController.updateCourse);
 
 // Biên tập nội dung
+// Chương
 router.post('/:courseId/sections', courseController.addSection);
-
-// Thêm Bài học và Quiz vào Chương (Section)
-router.post('/sections/:sectionId/lessons', courseController.addLesson);
+router.put('/sections/:sectionId', courseController.updateSection);
 router.post('/sections/:sectionId/quizzes', courseController.addQuiz);
 
-// Cấu trúc mới: Thêm File đính kèm vào Bài học (Lesson)
-// Bắt buộc đi qua upload.single('file') để đẩy file lên Cloudinary
+// Lesson
+router.post('/sections/:sectionId/lessons', upload.single('video'), courseController.addLesson);
+router.put('/lessons/:lessonId', upload.single('video'), courseController.updateLesson);
+
+// Attachment
 router.post('/lessons/:lessonId/attachments', upload.single('file'), courseController.addAttachment);
+router.put('/attachments/:attachmentId', upload.single('file'), courseController.updateAttachment);
 
 module.exports = router;
