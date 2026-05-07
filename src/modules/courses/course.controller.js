@@ -61,7 +61,7 @@ exports.addLesson = catchAsync(async (req, res, next) => {
 });
 
 exports.updateLesson = catchAsync(async (req, res, next) => {
-    const updatedLesson = await courseService.updateLesson(req.params.lessonId, req.body, req.file);
+    const updatedLesson = await courseService.updateLesson(req.params.lessonId, req.user.id, req.body, req.file);
     res.status(200).json({
         status: 'success',
         message: 'Cập nhật bài học thành công!',
