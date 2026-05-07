@@ -61,12 +61,19 @@ exports.getCourseDetailForMod = async (courseId) => {
                     {
                         model: Lesson,
                         as: 'lessons',
-                        include: [{ model: Attachment, as: 'attachments' }] // Lấy cả tài liệu đính kèm
-                    },
-                    {
-                        model: Quiz,
-                        as: 'quizzes'
+                        include:
+                            [
+                                {
+                                    model: Attachment,
+                                    as: 'attachments'
+                                },
+                                {
+                                    model: Quiz,
+                                    as: 'quizzes'
+                                }
+                            ] // Lấy cả tài liệu đính kèm
                     }
+
                 ]
             }
         ],

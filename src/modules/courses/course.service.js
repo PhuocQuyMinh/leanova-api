@@ -270,9 +270,9 @@ exports.updateAttachment = async (attachmentId, instructorId, attachmentData, fi
 };
 
 // [MỚI] Thêm Bài Quiz vào Chương
-exports.addQuiz = async (sectionId, instructorId, quizData) => {
-    const section = await Section.findByPk(sectionId);
-    if (!section) throw new AppError('Không tìm thấy chương này!', 404);
+exports.addQuiz = async (lessonId, instructorId, quizData) => {
+    const lesson = await Section.findByPk(lessonId);
+    if (!lesson) throw new AppError('Không tìm thấy bài học này!', 404);
 
     // [BẢO MẬT]
     await checkCourseOwnership(section.courseId, instructorId);
@@ -281,7 +281,7 @@ exports.addQuiz = async (sectionId, instructorId, quizData) => {
         title: quizData.title,
         passingScorePercent: quizData.passingScorePercent,
         timeLimitMinutes: quizData.timeLimitMinutes,
-        sectionId: section.id
+        lessonId: lesson.id
     });
     return newQuiz;
 };

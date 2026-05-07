@@ -73,8 +73,8 @@ Section.hasMany(Lesson, { foreignKey: 'sectionId', as: 'lessons', onDelete: 'CAS
 Lesson.belongsTo(Section, { foreignKey: 'sectionId' });
 
 // 4. Section - Quiz (Một chương có thể có nhiều bài Test kiểm tra)
-Section.hasMany(Quiz, { foreignKey: 'sectionId', as: 'quizzes', onDelete: 'CASCADE' });
-Quiz.belongsTo(Section, { foreignKey: 'sectionId' });
+Lesson.hasMany(Quiz, { foreignKey: 'lessonId', as: 'quizzes', onDelete: 'CASCADE' });
+Quiz.belongsTo(Lesson, { foreignKey: 'lessonId' });
 
 // 5. Lesson - Attachment (1 Bài học có thể đính kèm nhiều File)
 Lesson.hasMany(Attachment, { foreignKey: 'lessonId', as: 'attachments', onDelete: 'CASCADE' });
