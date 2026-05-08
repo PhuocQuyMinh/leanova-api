@@ -15,10 +15,19 @@ router.get('/lessons/:lessonId/questions', qaController.getLessonQuestions);
 router.post('/questions/:questionId/answers', qaController.answerQuestion);
 router.patch('/questions/:questionId/resolve', qaController.markAsResolved);
 
+// Cập nhật câu hỏi và câu trả lời 
+router.put('/questions/:questionId', qaController.updateQuestion);
+router.put('/answers/:answerId', qaController.updateAnswer);
+
+// NHÓM TÍNH NĂNG CỦA GIÁO VIÊN:
+
 router.get(
     '/instructor/unresolved',
     authMiddleware.restrictTo('Instructor'),
     qaController.getInstructorUnresolvedQuestions
 );
+
+// 5. Nhóm Yêu cầu xóa (Dành cho Giảng viên)
+router.post('/questions/:questionId/delete-request', authMiddleware.restrictTo('Instructor'), qaController.requestDeleteQuestion);
 
 module.exports = router;

@@ -31,3 +31,24 @@ exports.getInstructorUnresolvedQuestions = catchAsync(async (req, res, next) => 
         data: { questions }
     });
 });
+
+// [MỚI] Nhóm API Cập nhật & Yêu cầu xóa
+
+exports.updateQuestion = catchAsync(async (req, res, next) => {
+    const question = await qaService.updateQuestion(req.user.id, req.params.questionId, req.body);
+    res.status(200).json({ status: 'success', data: { question } });
+});
+
+exports.updateAnswer = catchAsync(async (req, res, next) => {
+    const answer = await qaService.updateAnswer(req.user.id, req.params.answerId, req.body);
+    res.status(200).json({ status: 'success', data: { answer } });
+});
+
+exports.requestDeleteQuestion = catchAsync(async (req, res, next) => {
+    const question = await qaService.requestDeleteQuestion(req.user.id, req.params.questionId, req.body.reason);
+    res.status(200).json({
+        status: 'success',
+        message: 'Đã gửi yêu cầu xóa đến Kiểm duyệt viên thành công!',
+        data: { question }
+    });
+});

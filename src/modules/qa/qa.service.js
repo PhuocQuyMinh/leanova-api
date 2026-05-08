@@ -135,3 +135,64 @@ exports.getInstructorUnresolvedQuestions = async (instructorId) => {
 
     return questions;
 };
+
+// ==========================================
+// NHÓM CẬP NHẬT & XÓA (UPDATE & DELETE)
+// ==========================================
+
+// 6. Sửa câu hỏi (Chỉ Tác giả mới được sửa)
+exports.updateQuestion = async (userId, questionId, updateData) => {
+    const question = await LessonQuestion.findByPk(questionId);
+    if (!question) throw new AppError('Câu hỏi không tồn tại!', 404);
+
+    // Kiểm tra quyền sở hữu
+    if (question.userId !== userId) {
+        throw new AppError('Lỗi bảo mật: Bạn chỉ có quyền sửa câu hỏi do chính mình tạo ra!', 403);
+    }
+
+    // Chỉ cho phép cập nhật tiêu đề và nội dung
+    question.title = updateData.title || question.title;
+    question.content = updateData.content || question.content;
+    await question.save();
+
+    return question;
+};
+
+// 7. Sửa câu trả lời (Chỉ Tác giả mới được sửa)
+exports.updateAnswer = async (userId, answerId, updateData) => {
+    const answer = await LessonAnswer.findByPk(answerId);
+    if (!answer) throw new AppError('Câu trả lời không tồn tại!', 404);
+
+    if (answer.userId !== userId) {
+        throw new AppError('Lỗi bảo mật: Bạn chỉ có quyền sửa câu trả lời do chính mình tạo ra!', 403);
+    }
+
+    answer.content = updateData.content || answer.content;
+    await answer.save();
+
+    return answer;
+};
+
+// 8. Giảng viên tạo Request yêu cầu Kiểm duyệt viên xóa câu hỏi
+exports.requestDeleteQuestion = async (userId, questionId, reason) => {
+    const question = await LessonQuestion.findByPk(questionId);
+    if (!question) throw new AppError('Câu hỏi không tồn tại!', 404);
+
+    // Dùng hàm Helper cũ để check xem người này CÓ PHẢI LÀ GIẢNG VIÊN của khóa này không
+    const { isInstructor } = await checkAccessRight(userId, question.lessonId);
+
+    if (!isInstructor) {
+        throw new AppError('Chỉ Giảng viên phụ trách khóa học mới có quyền yêu cầu xóa câu hỏi!', 403);
+    }
+
+    if (!reason || reason.trim() === '') {
+        throw new AppError('Vui lòng cung cấp lý do yêu cầu xóa để Kiểm duyệt viên xem xét!', 400);
+    }
+
+    // Đánh dấu cờ yêu cầu xóa
+    question.isDeletionRequested = true;
+    question.deletionReason = reason;
+    await question.save();
+
+    return question;
+};

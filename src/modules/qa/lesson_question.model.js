@@ -10,7 +10,10 @@ const LessonQuestion = sequelize.define('LessonQuestion', {
     userId: { type: DataTypes.INTEGER, allowNull: false },
     title: { type: DataTypes.STRING, allowNull: false }, // Tiêu đề câu hỏi
     content: { type: DataTypes.TEXT, allowNull: false }, // Nội dung chi tiết
-    isResolved: { type: DataTypes.BOOLEAN, defaultValue: false } // Đánh dấu đã giải quyết xong chưa
+    isResolved: { type: DataTypes.BOOLEAN, defaultValue: false }, // Đánh dấu đã giải quyết xong chưa    
+    // Các cột phục vụ luồng kiểm duyệt xóa bài
+    isDeletionRequested: { type: DataTypes.BOOLEAN, defaultValue: false },
+    deletionReason: { type: DataTypes.TEXT, allowNull: true }
 }, {
     tableName: 'lesson_questions',
     timestamps: true
