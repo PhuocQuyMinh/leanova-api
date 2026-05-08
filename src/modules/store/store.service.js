@@ -295,9 +295,8 @@ exports.getEnrolledCourseDetail = async (userId, courseId) => {
                 include: [
                     {
                         model: Lesson, as: 'lessons',
-                        include: [{ model: Attachment, as: 'attachments' }] // Full tài liệu đính kèm
-                    },
-                    { model: Quiz, as: 'quizzes' } // Full trắc nghiệm
+                        include: [{ model: Attachment, as: 'attachments' }, { model: Quiz, as: 'quizzes' }] // Full tài liệu đính kèm
+                    }
                 ]
             }
         ],

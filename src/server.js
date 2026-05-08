@@ -19,6 +19,9 @@ const InstructorSetting = require('./modules/finance/instructor_setting.model');
 const OrderItem = require('./modules/finance/order_item.model');
 const WithdrawalRequest = require('./modules/finance/withdrawal_request.model');
 const SystemSetting = require('./modules/finance/system_setting.model');
+const LessonAnswer = require('./modules/qa/lesson_answer.model');
+const LessonQuestion = require('./modules/qa/lesson_question.model');
+
 
 const app = require('./app');
 

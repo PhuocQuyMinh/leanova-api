@@ -1,0 +1,99 @@
+const LessonQuestion = require('./lesson_question.model');
+const LessonAnswer = require('./lesson_answer.model');
+const Lesson = require('../courses/lesson.model');
+const Section = require('../courses/section.model');
+const Course = require('../courses/course.model');
+const Enrollment = require('../store/enrollment.model');
+const User = require('../users/user.model');
+const AppError = require('../../core/utils/appError');
+
+// Hàm Helper: Kiểm tra xem User có quyền truy cập khóa học này không (Là học viên đã mua HOẶC là giảng viên)
+const checkAccessRight = async (userId, lessonId) => {
+    // 1. Lấy dữ liệu không dùng 'as'
+    const lesson = await Lesson.findByPk(lessonId, {
+        include: [{
+            model: Section,
+            include: [{ model: Course }]
+        }]
+    });
+
+    // 2. Phải dùng chữ cái IN HOA (Section, Course) theo mặc định của Sequelize
+    if (!lesson || !lesson.Section || !lesson.Section.Course) {
+        throw new AppError('Dữ liệu bài học hoặc khóa học không hợp lệ!', 404);
+    }
+
+    const courseId = lesson.Section.Course.id;
+    const instructorId = lesson.Section.Course.instructorId;
+
+    // 3. Phân quyền
+    if (instructorId === userId) return { courseId, isInstructor: true };
+
+    const isEnrolled = await Enrollment.findOne({ where: { userId, courseId } });
+    if (!isEnrolled) {
+        throw new AppError('Bạn phải sở hữu khóa học này mới được tham gia thảo luận!', 403);
+    }
+
+    return { courseId, isInstructor: false };
+};
+
+// 1. Đặt câu hỏi mới
+exports.askQuestion = async (userId, lessonId, questionData) => {
+    const { courseId } = await checkAccessRight(userId, lessonId);
+
+    return await LessonQuestion.create({
+        lessonId,
+        courseId,
+        userId,
+        title: questionData.title,
+        content: questionData.content
+    });
+};
+
+// 2. Lấy danh sách câu hỏi của 1 bài học (Kèm theo các câu trả lời)
+exports.getLessonQuestions = async (lessonId) => {
+    return await LessonQuestion.findAll({
+        where: { lessonId },
+        order: [['createdAt', 'DESC']],
+        include: [
+            { model: User, as: 'author', attributes: ['id', 'fullName', 'role'] },
+            {
+                model: LessonAnswer,
+                as: 'answers',
+                include: [{ model: User, as: 'author', attributes: ['id', 'fullName'] }],
+                order: [['createdAt', 'ASC']] // Câu trả lời cũ xếp trên
+            }
+        ]
+    });
+};
+
+// 3. Trả lời câu hỏi
+exports.answerQuestion = async (userId, questionId, content) => {
+    const question = await LessonQuestion.findByPk(questionId);
+    if (!question) throw new AppError('Câu hỏi không tồn tại!', 404);
+
+    const { isInstructor } = await checkAccessRight(userId, question.lessonId);
+
+    return await LessonAnswer.create({
+        questionId,
+        userId,
+        content,
+        isInstructorResponse: isInstructor // Tự động đánh dấu nếu người trả lời là giảng viên
+    });
+};
+
+// 4. Giảng viên đánh dấu câu hỏi đã được giải quyết
+exports.markAsResolved = async (userId, questionId) => {
+    const question = await LessonQuestion.findByPk(questionId);
+    if (!question) throw new AppError('Câu hỏi không tồn tại!', 404);
+
+    const { isInstructor } = await checkAccessRight(userId, question.lessonId);
+
+    // Chỉ người đặt câu hỏi HOẶC giảng viên mới được đánh dấu Resolve
+    if (question.userId !== userId && !isInstructor) {
+        throw new AppError('Bạn không có quyền thực hiện hành động này!', 403);
+    }
+
+    question.isResolved = true;
+    await question.save();
+    return question;
+};

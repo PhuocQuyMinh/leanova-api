@@ -22,6 +22,8 @@ const storeRoutes = require('./modules/store/store.routes');
 const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
 const categoryRoutes = require('./modules/categories/category.routes');
 const financeRoutes = require('./modules/finance/finance.routes');
+const qaRoutes = require('./modules/qa/qa.routes');
+
 
 // 2. Routes
 app.get('/api/healthcheck', (req, res) => {
@@ -45,6 +47,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/categories', categoryRoutes);
 
 app.use('/api/finance', financeRoutes);
+
+app.use('/api/qa', qaRoutes);
 
 // 3. Xử lý đường dẫn không tồn tại (404)
 app.use((req, res, next) => {
