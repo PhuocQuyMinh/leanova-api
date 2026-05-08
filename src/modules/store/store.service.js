@@ -181,6 +181,10 @@ exports.vnpayReturn = async (vnp_Params) => {
             order.status = 'Success';
             await order.save();
 
+            // 1. Lấy phí mặc định từ DB trước
+            const globalSetting = await SystemSetting.findByPk('DEFAULT_COMMISSION_RATE');
+            const defaultRate = globalSetting ? parseFloat(globalSetting.value) : 0.7; // Fallback về 0.7 nếu DB trống
+
             // 2. Lấy giỏ hàng KÈM THEO thông tin Khóa học (giá, ID giảng viên)
             const cartItems = await CartItem.findAll({
                 where: { userId: order.userId },
@@ -215,8 +219,8 @@ exports.vnpayReturn = async (vnp_Params) => {
                 });
 
                 // Mảng OrderItems (Chia tiền)
-                // Nếu giảng viên chưa có cài đặt, lấy mặc định 70% (0.7)
-                const commissionRate = commissionMap[course.instructorId] || 0.7;
+                // Nếu giảng viên chưa có cài đặt, lấy mặc định của nền tảng
+                const commissionRate = commissionMap[course.instructorId] || defaultRate;
                 const instructorEarnings = Math.round(course.price * commissionRate);
 
                 orderItemsData.push({
