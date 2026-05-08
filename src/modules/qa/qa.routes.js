@@ -15,4 +15,10 @@ router.get('/lessons/:lessonId/questions', qaController.getLessonQuestions);
 router.post('/questions/:questionId/answers', qaController.answerQuestion);
 router.patch('/questions/:questionId/resolve', qaController.markAsResolved);
 
+router.get(
+    '/instructor/unresolved',
+    authMiddleware.restrictTo('Instructor'),
+    qaController.getInstructorUnresolvedQuestions
+);
+
 module.exports = router;

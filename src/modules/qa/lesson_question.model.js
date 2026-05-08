@@ -18,7 +18,7 @@ const LessonQuestion = sequelize.define('LessonQuestion', {
 
 // Liên kết
 Lesson.hasMany(LessonQuestion, { foreignKey: 'lessonId', as: 'questions' });
-LessonQuestion.belongsTo(Lesson, { foreignKey: 'lessonId' });
+LessonQuestion.belongsTo(Lesson, { foreignKey: 'lessonId', as: 'lesson' });
 
 User.hasMany(LessonQuestion, { foreignKey: 'userId', as: 'questions' });
 LessonQuestion.belongsTo(User, { foreignKey: 'userId', as: 'author' });

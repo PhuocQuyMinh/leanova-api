@@ -20,3 +20,14 @@ exports.markAsResolved = catchAsync(async (req, res, next) => {
     const question = await qaService.markAsResolved(req.user.id, req.params.questionId);
     res.status(200).json({ status: 'success', message: 'Đã đánh dấu giải quyết', data: { question } });
 });
+
+// [MỚI] Lấy danh sách câu hỏi chưa xử lý cho Dashboard Giảng viên
+exports.getInstructorUnresolvedQuestions = catchAsync(async (req, res, next) => {
+    const questions = await qaService.getInstructorUnresolvedQuestions(req.user.id);
+
+    res.status(200).json({
+        status: 'success',
+        results: questions.length,
+        data: { questions }
+    });
+});

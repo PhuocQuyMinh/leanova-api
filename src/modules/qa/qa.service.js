@@ -6,6 +6,7 @@ const Course = require('../courses/course.model');
 const Enrollment = require('../store/enrollment.model');
 const User = require('../users/user.model');
 const AppError = require('../../core/utils/appError');
+const { Op } = require('sequelize'); // Import Op để dùng toán tử IN
 
 // Hàm Helper: Kiểm tra xem User có quyền truy cập khóa học này không (Là học viên đã mua HOẶC là giảng viên)
 const checkAccessRight = async (userId, lessonId) => {
@@ -96,4 +97,41 @@ exports.markAsResolved = async (userId, questionId) => {
     question.isResolved = true;
     await question.save();
     return question;
+};
+
+// 5. Dashboard Giảng viên: Lấy toàn bộ câu hỏi chưa trả lời của tất cả khóa học
+exports.getInstructorUnresolvedQuestions = async (instructorId) => {
+    // 1. Tìm tất cả ID khóa học mà giảng viên này sở hữu
+    const myCourses = await Course.findAll({
+        where: { instructorId: instructorId },
+        attributes: ['id']
+    });
+
+    const courseIds = myCourses.map(c => c.id);
+
+    // Nếu giảng viên chưa có khóa học nào, trả về mảng rỗng
+    if (courseIds.length === 0) return [];
+
+    // 2. Tìm tất cả câu hỏi thuộc các khóa học này và chưa được giải quyết
+    const questions = await LessonQuestion.findAll({
+        where: {
+            courseId: { [Op.in]: courseIds },
+            isResolved: false
+        },
+        include: [
+            {
+                model: User,
+                as: 'author',
+                attributes: ['id', 'fullName']
+            },
+            {
+                model: Lesson,
+                as: 'lesson',
+                attributes: ['id', 'title']
+            }
+        ],
+        order: [['createdAt', 'DESC']] // Câu hỏi mới nhất hiện lên đầu
+    });
+
+    return questions;
 };
