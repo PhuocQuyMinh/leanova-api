@@ -44,6 +44,10 @@ const User = sequelize.define('User', {
     isActive: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
+    },
+    lockReason: {
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 }, {
     tableName: 'users',

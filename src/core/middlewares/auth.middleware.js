@@ -28,6 +28,11 @@ exports.protect = catchAsync(async (req, res, next) => {
         return next(new AppError('Người dùng sở hữu token này không còn tồn tại.', 401));
     }
 
+    // [MỚI] 4. Kiểm tra tài khoản có đang bị khóa không?
+    if (currentUser.isActive === false) {
+        return next(new AppError(`Tài khoản của bạn đã bị khóa! Lý do: ${currentUser.lockReason || 'Vi phạm chính sách.'}`, 403));
+    }
+
     // 4. Mọi thứ OK! Cấp quyền đi tiếp.
     // Lưu thông tin User vào req để các route đằng sau có thể lấy ra dùng (ví dụ: req.user.id)
     req.user = currentUser;

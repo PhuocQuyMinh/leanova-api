@@ -13,4 +13,13 @@ router.get('/me', userController.getMe);
 // API xem thống kê (Đã đăng nhập, NHƯNG phải mang Role là Admin mới vào được)
 router.get('/admin/stats', authMiddleware.restrictTo('Admin'), userController.getAdminDashboard);
 
+router.use(authMiddleware.restrictTo('Mod', 'Admin'));
+
+// Khóa tài khoản
+router.patch('/:userId/lock', userController.lockAccount);
+// => Tương lai cần làm cả ở frontend (xóa token và chuyển sang trang login)
+
+// Mở khóa tài khoản
+router.patch('/:userId/unlock', userController.unlockAccount);
+
 module.exports = router;
