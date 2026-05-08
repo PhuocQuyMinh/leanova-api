@@ -17,7 +17,7 @@ const moment = require('moment');
 const qs = require('qs');
 const OrderItem = require('../finance/order_item.model');
 const InstructorSetting = require('../finance/instructor_setting.model');
-
+const SystemSetting = require('../finance/system_setting.model');
 
 // 1. Cửa hàng: Lấy danh sách khóa học đang bán
 exports.getPublishedCourses = async () => {
