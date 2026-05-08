@@ -15,6 +15,9 @@ const QuizAttempt = require('./quiz_attempt.model');
 const crypto = require('crypto');
 const moment = require('moment');
 const qs = require('qs');
+const OrderItem = require('../finance/order_item.model');
+const InstructorSetting = require('../finance/instructor_setting.model');
+
 
 // 1. Cửa hàng: Lấy danh sách khóa học đang bán
 exports.getPublishedCourses = async () => {
@@ -174,19 +177,63 @@ exports.vnpayReturn = async (vnp_Params) => {
 
         if (responseCode === '00') {
             // GIAO DỊCH THÀNH CÔNG (Tiền đã vào túi)
-            // 1. Cập nhật Order
+            // 1. Cập nhật trạng thái Order
             order.status = 'Success';
             await order.save();
 
-            // 2. Lấy giỏ hàng và Chuyển thành Enrollment (Giao khóa học)
-            const cartItems = await CartItem.findAll({ where: { userId: order.userId } });
-            const enrollmentsData = cartItems.map(item => ({
-                userId: order.userId,
-                courseId: item.courseId
-            }));
-            await Enrollment.bulkCreate(enrollmentsData);
+            // 2. Lấy giỏ hàng KÈM THEO thông tin Khóa học (giá, ID giảng viên)
+            const cartItems = await CartItem.findAll({
+                where: { userId: order.userId },
+                include: [{ model: Course, attributes: ['id', 'price', 'instructorId'] }]
+            });
 
-            // 3. Xóa giỏ hàng
+            // Lấy danh sách ID của các giảng viên có khóa học trong giỏ hàng
+            const instructorIds = [...new Set(cartItems.map(item => item.Course.instructorId))];
+
+            // Truy vấn cài đặt hoa hồng của các giảng viên này
+            const settings = await InstructorSetting.findAll({
+                where: { userId: instructorIds }
+            });
+
+            // Tạo 1 map { instructorId: commissionRate } để tra cứu nhanh
+            const commissionMap = {};
+            settings.forEach(setting => {
+                commissionMap[setting.userId] = setting.commissionRate;
+            });
+
+            // 3. Chuẩn bị mảng dữ liệu để Insert vào 2 bảng (Enrollments và OrderItems)
+            const enrollmentsData = [];
+            const orderItemsData = [];
+
+            cartItems.forEach(item => {
+                const course = item.Course;
+
+                // Mảng Enrollments (Cấp quyền học)
+                enrollmentsData.push({
+                    userId: order.userId,
+                    courseId: course.id
+                });
+
+                // Mảng OrderItems (Chia tiền)
+                // Nếu giảng viên chưa có cài đặt, lấy mặc định 70% (0.7)
+                const commissionRate = commissionMap[course.instructorId] || 0.7;
+                const instructorEarnings = Math.round(course.price * commissionRate);
+
+                orderItemsData.push({
+                    orderId: order.id,
+                    courseId: course.id,
+                    instructorId: course.instructorId,
+                    priceAtPurchase: course.price,
+                    commissionRate: commissionRate,
+                    instructorEarnings: instructorEarnings
+                });
+            });
+
+            // 4. Lưu đồng loạt vào Database (Bulk Create)
+            await Enrollment.bulkCreate(enrollmentsData);
+            await OrderItem.bulkCreate(orderItemsData); // <-- Lưu lịch sử tài chính cho Giảng viên
+
+            // 5. Xóa giỏ hàng
             await CartItem.destroy({ where: { userId: order.userId } });
 
             return { code: '00', message: 'Thanh toán thành công! Khóa học đã được mở.' };
