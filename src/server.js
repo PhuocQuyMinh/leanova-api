@@ -15,6 +15,10 @@ const LessonProgress = require('./modules/store/lesson_progress.model');
 const QuizAttempt = require('./modules/store/quiz_attempt.model');
 const Order = require('./modules/store/order.model');
 const Category = require('./modules/categories/category.model');
+const InstructorSetting = require('./modules/finance/instructor_setting.model');
+const OrderItem = require('./modules/finance/order_item.model');
+const WithdrawalRequest = require('./modules/finance/withdrawal_request.model');
+
 
 const app = require('./app');
 

@@ -7,6 +7,7 @@ const sequelize = new Sequelize(
     process.env.DB_PASSWORD,
     {
         host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
         dialect: 'mysql',
         logging: false, // Tắt dòng log câu lệnh SQL trên terminal cho đỡ rối
         pool: {
