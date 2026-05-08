@@ -67,3 +67,32 @@ exports.updateInstructorCommission = catchAsync(async (req, res, next) => {
         data: { setting }
     });
 });
+
+// ... (các hàm cũ)
+
+// ==========================================
+// NHÓM API ADMIN
+// ==========================================
+
+exports.getAllWithdrawalRequests = catchAsync(async (req, res, next) => {
+    // Truyền req.query xuống để hỗ trợ lọc (vd: /admin/withdrawals?status=Pending)
+    const requests = await financeService.getAllWithdrawalRequests(req.query);
+
+    res.status(200).json({
+        status: 'success',
+        results: requests.length,
+        data: { requests }
+    });
+});
+
+exports.reviewWithdrawalRequest = catchAsync(async (req, res, next) => {
+    const { status, adminNote } = req.body;
+
+    const request = await financeService.reviewWithdrawalRequest(req.params.id, status, adminNote);
+
+    res.status(200).json({
+        status: 'success',
+        message: `Đã cập nhật trạng thái lệnh rút tiền thành: ${status}`,
+        data: { request }
+    });
+});

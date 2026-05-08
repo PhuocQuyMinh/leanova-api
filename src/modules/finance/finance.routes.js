@@ -36,4 +36,8 @@ router.patch('/admin/global-commission', isAdmin, financeController.updateGlobal
 // Thay đổi phí cho từng giảng viên cụ thể
 router.patch('/admin/instructor-commission', isAdmin, financeController.updateInstructorCommission);
 
+// [MỚI] Quản lý lệnh rút tiền
+router.get('/admin/withdrawals', isAdmin, financeController.getAllWithdrawalRequests);
+router.patch('/admin/withdrawals/:id/status', isAdmin, financeController.reviewWithdrawalRequest);
+
 module.exports = router;

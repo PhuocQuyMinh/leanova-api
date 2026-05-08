@@ -199,3 +199,52 @@ exports.updateInstructorCommission = async (instructorId, rate) => {
 
     return setting;
 };
+
+// ==========================================
+// NHÓM API DÀNH CHO ADMIN QUẢN LÝ TÀI CHÍNH
+// ==========================================
+
+// 7. Lấy danh sách tất cả yêu cầu rút tiền của hệ thống (Có thể lọc theo status)
+exports.getAllWithdrawalRequests = async (query) => {
+    const { status } = query;
+    const whereClause = status ? { status } : {}; // Nếu có truyền query ?status=Pending thì lọc, không thì lấy hết
+
+    return await WithdrawalRequest.findAll({
+        where: whereClause,
+        order: [['createdAt', 'ASC']] // Sắp xếp cũ nhất lên đầu để ưu tiên xử lý trước
+    });
+};
+
+// 8. Duyệt / Từ chối yêu cầu rút tiền
+exports.reviewWithdrawalRequest = async (requestId, status, adminNote) => {
+    const request = await WithdrawalRequest.findByPk(requestId);
+
+    if (!request) {
+        throw new AppError('Không tìm thấy lệnh rút tiền này!', 404);
+    }
+
+    // Kiểm tra đầu vào hợp lệ
+    const validStatuses = ['Approved', 'Completed', 'Rejected'];
+    if (!validStatuses.includes(status)) {
+        throw new AppError('Trạng thái không hợp lệ! Chỉ nhận: Approved, Completed, Rejected.', 400);
+    }
+
+    // Ràng buộc bảo mật 1: Đã xong hoặc đã hủy thì không được sửa lại
+    if (request.status === 'Completed' || request.status === 'Rejected') {
+        throw new AppError(`Không thể can thiệp! Lệnh này đã ở trạng thái: ${request.status}`, 400);
+    }
+
+    // Ràng buộc bảo mật 2: Nếu từ chối, bắt buộc phải ghi chú lý do cho giảng viên biết
+    if (status === 'Rejected' && (!adminNote || adminNote.trim() === '')) {
+        throw new AppError('Vui lòng cung cấp lý do từ chối (adminNote) để giảng viên sửa lại!', 400);
+    }
+
+    // Cập nhật dữ liệu
+    request.status = status;
+    if (adminNote) {
+        request.adminNote = adminNote;
+    }
+
+    await request.save();
+    return request;
+};
