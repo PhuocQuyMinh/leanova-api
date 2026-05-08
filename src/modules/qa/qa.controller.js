@@ -52,3 +52,25 @@ exports.requestDeleteQuestion = catchAsync(async (req, res, next) => {
         data: { question }
     });
 });
+
+// [MOD API] Lấy danh sách chờ xử lý
+exports.getPendingDeletionQuestions = catchAsync(async (req, res, next) => {
+    const questions = await qaService.getPendingDeletionQuestions();
+    res.status(200).json({
+        status: 'success',
+        results: questions.length,
+        data: { questions }
+    });
+});
+
+// [MOD API] Xử lý yêu cầu
+exports.handleDeleteRequest = catchAsync(async (req, res, next) => {
+    const { action, modNote } = req.body;
+    const result = await qaService.handleDeleteRequest(req.params.questionId, action, modNote);
+
+    res.status(200).json({
+        status: 'success',
+        message: result.message,
+        data: result.question ? { question: result.question } : null
+    });
+});

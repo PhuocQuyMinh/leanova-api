@@ -30,4 +30,16 @@ router.get(
 // 5. Nhóm Yêu cầu xóa (Dành cho Giảng viên)
 router.post('/questions/:questionId/delete-request', authMiddleware.restrictTo('Instructor'), qaController.requestDeleteQuestion);
 
+
+// ==========================================
+// NHÓM API DÀNH CHO KIỂM DUYỆT VIÊN (MOD/ADMIN)
+// ==========================================
+router.use(authMiddleware.restrictTo('Mod', 'Admin'));
+
+// Xem danh sách các bài bị report yêu cầu xóa
+router.get('/mod/pending-deletions', qaController.getPendingDeletionQuestions);
+
+// Quyết định Xóa hoặc Không xóa
+router.patch('/mod/questions/:questionId/handle-delete', qaController.handleDeleteRequest);
+
 module.exports = router;

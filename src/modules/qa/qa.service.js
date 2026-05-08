@@ -196,3 +196,52 @@ exports.requestDeleteQuestion = async (userId, questionId, reason) => {
 
     return question;
 };
+
+// ==========================================
+// NHÓM API DÀNH CHO KIỂM DUYỆT VIÊN (MOD/ADMIN)
+// ==========================================
+
+// ==========================================
+// NHÓM API DÀNH CHO KIỂM DUYỆT VIÊN (MOD/ADMIN)
+// ==========================================
+
+// 9. Lấy danh sách tất cả các câu hỏi đang bị báo cáo yêu cầu xóa
+exports.getPendingDeletionQuestions = async () => {
+    return await LessonQuestion.findAll({
+        where: { isDeletionRequested: true },
+        include: [
+            { model: User, as: 'author', attributes: ['id', 'fullName'] },
+            { model: Lesson, as: 'lesson', attributes: ['id', 'title'] }
+        ],
+        order: [['updatedAt', 'ASC']] // Ưu tiên xử lý các yêu cầu cũ trước
+    });
+};
+
+// 10. Xử lý yêu cầu xóa (Chấp nhận hoặc Từ chối)
+exports.handleDeleteRequest = async (questionId, action, modNote) => {
+    const question = await LessonQuestion.findByPk(questionId);
+    if (!question) throw new AppError('Câu hỏi không tồn tại!', 404);
+
+    if (action === 'approve') {
+        // CHẤP NHẬN: Xóa vĩnh viễn câu hỏi khỏi Database
+        await question.destroy();
+        return { message: 'Đã xóa câu hỏi thành công theo yêu cầu.' };
+    }
+
+    if (action === 'reject') {
+        // TỪ CHỐI: Phải có lý do
+        if (!modNote || modNote.trim() === '') {
+            throw new AppError('Vui lòng cung cấp lý do từ chối xóa để thông báo cho Giảng viên!', 400);
+        }
+
+        // Gỡ cờ yêu cầu và lưu lại lý do từ chối
+        question.isDeletionRequested = false;
+        question.modNote = modNote;
+        // Có thể giữ lại deletionReason cũ để giảng viên đối chiếu nếu cần
+        await question.save();
+
+        return { message: 'Đã từ chối yêu cầu xóa.', question };
+    }
+
+    throw new AppError('Hành động không hợp lệ! (Chỉ nhận approve hoặc reject)', 400);
+};

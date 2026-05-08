@@ -13,7 +13,8 @@ const LessonQuestion = sequelize.define('LessonQuestion', {
     isResolved: { type: DataTypes.BOOLEAN, defaultValue: false }, // Đánh dấu đã giải quyết xong chưa    
     // Các cột phục vụ luồng kiểm duyệt xóa bài
     isDeletionRequested: { type: DataTypes.BOOLEAN, defaultValue: false },
-    deletionReason: { type: DataTypes.TEXT, allowNull: true }
+    deletionReason: { type: DataTypes.TEXT, allowNull: true },
+    modNote: { type: DataTypes.TEXT, allowNull: true }
 }, {
     tableName: 'lesson_questions',
     timestamps: true
