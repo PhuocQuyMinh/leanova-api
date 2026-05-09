@@ -7,6 +7,7 @@ const Enrollment = require('../store/enrollment.model');
 const User = require('../users/user.model');
 const AppError = require('../../core/utils/appError');
 const { Op } = require('sequelize'); // Import Op để dùng toán tử IN
+const notifService = require('../notifications/notification.service');
 
 // Hàm Helper: Kiểm tra xem User có quyền truy cập khóa học này không (Là học viên đã mua HOẶC là giảng viên)
 const checkAccessRight = async (userId, lessonId) => {
@@ -73,6 +74,16 @@ exports.answerQuestion = async (userId, questionId, content) => {
     if (!question) throw new AppError('Câu hỏi không tồn tại!', 404);
 
     const { isInstructor } = await checkAccessRight(userId, question.lessonId);
+
+    // Gọi thông báo
+    await notifService.pushNotification({
+        userId: question.userId, // ID của học sinh đặt câu hỏi
+        title: isInstructor ? 'Giảng viên vừa trả lời cầu hỏi của bạn' : 'Vừa có một bạn học trả lời câu hỏi của bạn',
+        message: `Câu hỏi "${question.title}" vừa có phản hồi mới.`,
+        type: 'QnA',
+        actionUrl: `/courses/${question.courseId}/learn?question=${questionId}`,
+        isSendEmail: true // Bắn cả email báo cho học sinh quay lại học
+    });
 
     return await LessonAnswer.create({
         questionId,
