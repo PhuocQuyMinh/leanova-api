@@ -33,3 +33,70 @@ exports.getPeriodicStats = catchAsync(async (req, res, next) => {
         data: stats
     });
 });
+
+// ==========================================
+// 2. NHÓM API DÀNH CHO GIẢNG VIÊN
+// ==========================================
+
+// Xem danh sách toàn bộ review của các khóa học mình dạy
+exports.getInstructorReviews = catchAsync(async (req, res, next) => {
+    const reviews = await dashboardService.getInstructorReviews(req.user.id);
+
+    res.status(200).json({
+        status: 'success',
+        results: reviews.length,
+        data: { reviews }
+    });
+});
+
+// Phản hồi đánh giá của học viên
+exports.replyToReview = catchAsync(async (req, res, next) => {
+    const { replyContent } = req.body;
+    const review = await dashboardService.replyToReview(req.user.id, req.params.id, replyContent);
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Đã gửi phản hồi cho học viên.',
+        data: { review }
+    });
+});
+
+// Báo cáo đánh giá xấu/spam lên Mod
+exports.reportReview = catchAsync(async (req, res, next) => {
+    const { reason } = req.body;
+    const review = await dashboardService.reportReview(req.user.id, req.params.id, reason);
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Đã gửi báo cáo cho Kiểm duyệt viên xử lý.',
+        data: { review }
+    });
+});
+
+// ==========================================
+// 3. NHÓM API DÀNH CHO KIỂM DUYỆT VIÊN (MOD/ADMIN)
+// ==========================================
+// Xem danh sách các đánh giá đang bị báo cáo
+exports.getReportedReviews = catchAsync(async (req, res, next) => {
+    const reviews = await dashboardService.getReportedReviews();
+
+    res.status(200).json({
+        status: 'success',
+        results: reviews.length,
+        data: { reviews }
+    });
+});
+
+// Quyết định xử lý (Xóa đánh giá hoặc Từ chối báo cáo)
+exports.handleReviewReport = catchAsync(async (req, res, next) => {
+    const { action, modNote } = req.body;
+
+    const result = await dashboardService.handleReviewReport(req.params.id, action, modNote);
+
+    res.status(200).json({
+        status: 'success',
+        message: result.message,
+        // Trả về userIdToBan nếu hành động là 'delete', ngược lại trả về review đã cập nhật
+        data: result
+    });
+});

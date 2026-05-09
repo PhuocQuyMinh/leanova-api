@@ -7,6 +7,7 @@ const Enrollment = require('../store/enrollment.model');
 const Review = require('../courses/review.model');
 const LessonProgress = require('../store/lesson_progress.model');
 const AppError = require('../../core/utils/appError');
+const User = require('../users/user.model');
 
 // ==========================================
 // 1. THỐNG KÊ TỔNG QUAN (TẤT CẢ KHÓA HỌC)
@@ -195,4 +196,97 @@ exports.getPeriodicStats = async (instructorId, startDate, endDate) => {
             newReviews
         }
     };
+};
+
+// ==========================================
+// 4. QUẢN LÝ REVIEW
+// ==========================================
+// 1. Giảng viên lấy toàn bộ review của các khóa học mình sở hữu
+exports.getInstructorReviews = async (instructorId) => {
+    const courses = await Course.findAll({ where: { instructorId }, attributes: ['id'] });
+    const courseIds = courses.map(c => c.id);
+
+    return await Review.findAll({
+        where: { courseId: { [Op.in]: courseIds } },
+        include: [
+            { model: User, attributes: ['id', 'fullName', 'email'] }, // Kèm ID để báo cáo nếu cần
+            { model: Course, attributes: ['title'] }
+        ],
+        order: [['createdAt', 'DESC']]
+    });
+};
+
+// 2. Giảng viên phản hồi Review
+exports.replyToReview = async (instructorId, reviewId, replyContent) => {
+    const review = await Review.findByPk(reviewId, {
+        include: [{ model: Course }]
+    });
+
+    if (!review || review.Course.instructorId !== instructorId) {
+        throw new AppError('Bạn không có quyền phản hồi đánh giá này!', 403);
+    }
+
+    review.instructorReply = replyContent;
+    review.repliedAt = new Date();
+    await review.save();
+    return review;
+};
+
+// 3. Giảng viên báo cáo Review vi phạm
+exports.reportReview = async (instructorId, reviewId, reason) => {
+    const review = await Review.findByPk(reviewId, {
+        include: [{ model: Course }]
+    });
+
+    if (!review || review.Course.instructorId !== instructorId) {
+        throw new AppError('Bạn không có quyền báo cáo đánh giá này!', 403);
+    }
+
+    review.isReported = true;
+    review.reportReason = reason;
+    await review.save();
+    return review;
+};
+
+// 4. Mod/Admin xử lý báo cáo (Xóa review hoặc từ chối)
+exports.handleReviewReport = async (reviewId, action, modNote) => {
+    const review = await Review.findByPk(reviewId);
+    if (!review) throw new AppError('Đánh giá không tồn tại!', 404);
+
+    if (action === 'delete') {
+        // Trước khi xóa, ta có thể lấy userId của người review để Admin cân nhắc ban
+        const userIdToBan = review.userId;
+        await review.destroy();
+        return { message: 'Đánh giá đã bị xóa.', userIdToBan };
+    }
+
+    review.isReported = false;
+    review.modNote = modNote;
+    await review.save();
+    return { message: 'Yêu cầu xóa bị từ chối.', review };
+};
+
+// ==========================================
+// NHÓM API DÀNH CHO KIỂM DUYỆT VIÊN (MOD/ADMIN)
+// ==========================================
+
+// 5. Lấy danh sách các Review bị giảng viên báo cáo
+exports.getReportedReviews = async () => {
+    return await Review.findAll({
+        where: { isReported: true },
+        // Lấy luôn thông tin Học viên và Khóa học để Mod dễ đối chiếu
+        include: [
+            {
+                model: User,
+                // Không dùng 'as' vì trong định nghĩa Review.belongsTo(User) bạn không đặt 'as'
+                attributes: ['id', 'fullName', 'email', 'isActive', 'lockReason']
+            },
+            {
+                model: Course,
+                attributes: ['id', 'title', 'instructorId']
+            }
+        ],
+        // Sắp xếp theo thời gian cập nhật cũ nhất lên đầu để Mod xử lý trước
+        order: [['updatedAt', 'ASC']]
+    });
 };
