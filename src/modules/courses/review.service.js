@@ -65,3 +65,52 @@ exports.getCourseReviews = async (courseId) => {
         order: [['createdAt', 'DESC']] // Đánh giá mới nhất lên đầu
     });
 };
+
+// 3. Học viên tự xóa đánh giá của mình
+exports.deleteReview = async (userId, reviewId) => {
+    // 1. Tìm đánh giá
+    const review = await Review.findByPk(reviewId);
+    if (!review) {
+        throw new AppError('Không tìm thấy đánh giá này!', 404);
+    }
+
+    // 2. Ràng buộc bảo mật: Chỉ tác giả mới được xóa
+    if (review.userId !== userId) {
+        throw new AppError('Lỗi bảo mật: Bạn chỉ có quyền xóa đánh giá của chính mình!', 403);
+    }
+
+    const courseId = review.courseId;
+    const t = await sequelize.transaction();
+
+    try {
+        // 3. Xóa đánh giá khỏi database
+        await review.destroy({ transaction: t });
+
+        // 4. TÍNH TOÁN LẠI ĐIỂM TRUNG BÌNH SAU KHI XÓA
+        const stats = await Review.findAll({
+            where: { courseId },
+            attributes: [
+                [sequelize.fn('AVG', sequelize.col('rating')), 'avgRating'],
+                [sequelize.fn('COUNT', sequelize.col('id')), 'totalReviews']
+            ],
+            raw: true,
+            transaction: t
+        });
+
+        // Xử lý trường hợp nếu học viên này là người duy nhất đánh giá (xóa xong là bằng 0)
+        const totalReviews = parseInt(stats[0].totalReviews) || 0;
+        const newAvg = totalReviews > 0 ? Math.round(parseFloat(stats[0].avgRating) * 10) / 10 : 0.0;
+
+        // 5. Cập nhật lại điểm số chuẩn vào bảng Course
+        await Course.update(
+            { averageRating: newAvg, reviewCount: totalReviews },
+            { where: { id: courseId }, transaction: t }
+        );
+
+        await t.commit();
+        return { message: 'Đã xóa đánh giá thành công!' };
+    } catch (error) {
+        await t.rollback();
+        throw new AppError('Có lỗi xảy ra khi xóa đánh giá!', 500);
+    }
+};

@@ -100,3 +100,31 @@ exports.handleReviewReport = catchAsync(async (req, res, next) => {
         data: result
     });
 });
+
+// Sửa phản hồi đánh giá
+exports.updateReply = catchAsync(async (req, res, next) => {
+    const { replyContent } = req.body;
+
+    if (!replyContent || replyContent.trim() === '') {
+        return next(new AppError('Nội dung phản hồi không được để trống!', 400));
+    }
+
+    const review = await dashboardService.updateReply(req.user.id, req.params.id, replyContent);
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Đã cập nhật phản hồi thành công.',
+        data: { review }
+    });
+});
+
+// Xóa phản hồi đánh giá
+exports.deleteReply = catchAsync(async (req, res, next) => {
+    await dashboardService.deleteReply(req.user.id, req.params.id);
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Đã xóa phản hồi thành công.',
+        data: null
+    });
+});

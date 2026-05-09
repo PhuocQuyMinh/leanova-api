@@ -11,3 +11,13 @@ exports.getCourseReviews = catchAsync(async (req, res, next) => {
     const reviews = await reviewService.getCourseReviews(req.params.courseId);
     res.status(200).json({ status: 'success', results: reviews.length, data: { reviews } });
 });
+
+// [HỌC VIÊN] Xóa đánh giá của chính mình
+exports.deleteReview = catchAsync(async (req, res, next) => {
+    const result = await reviewService.deleteReview(req.user.id, req.params.id);
+
+    res.status(200).json({
+        status: 'success',
+        message: result.message
+    });
+});

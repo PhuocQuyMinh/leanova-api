@@ -232,6 +232,45 @@ exports.replyToReview = async (instructorId, reviewId, replyContent) => {
     return review;
 };
 
+// 2.1. Giảng viên cập nhật (sửa) phản hồi đã gửi
+exports.updateReply = async (instructorId, reviewId, replyContent) => {
+    const review = await Review.findByPk(reviewId, {
+        include: [{ model: Course }]
+    });
+
+    if (!review || review.Course.instructorId !== instructorId) {
+        throw new AppError('Bạn không có quyền sửa phản hồi này!', 403);
+    }
+
+    if (!review.instructorReply) {
+        throw new AppError('Bạn chưa có phản hồi nào cho đánh giá này để sửa!', 400);
+    }
+
+    review.instructorReply = replyContent;
+    review.repliedAt = new Date(); // Cập nhật lại thời gian sửa
+    await review.save();
+
+    return review;
+};
+
+// 2.2. Giảng viên xóa phản hồi của mình
+exports.deleteReply = async (instructorId, reviewId) => {
+    const review = await Review.findByPk(reviewId, {
+        include: [{ model: Course }]
+    });
+
+    if (!review || review.Course.instructorId !== instructorId) {
+        throw new AppError('Bạn không có quyền xóa phản hồi này!', 403);
+    }
+
+    // Set lại giá trị null cho nội dung và thời gian phản hồi
+    review.instructorReply = null;
+    review.repliedAt = null;
+    await review.save();
+
+    return review;
+};
+
 // 3. Giảng viên báo cáo Review vi phạm
 exports.reportReview = async (instructorId, reviewId, reason) => {
     const review = await Review.findByPk(reviewId, {

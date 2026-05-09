@@ -20,6 +20,8 @@ router.get('/courses/:courseId/stats', dashboardController.getCourseSpecificStat
 // 3. Quản lý reviews
 router.get('/my-reviews', dashboardController.getInstructorReviews);
 router.patch('/reviews/:id/reply', dashboardController.replyToReview);
+router.patch('/:id/reply', dashboardController.updateReply);
+router.delete('/:id/reply', dashboardController.deleteReply);
 router.post('/reviews/:id/report', dashboardController.reportReview);
 
 

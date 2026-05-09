@@ -14,6 +14,7 @@ router.use(authMiddleware.protect);
 
 // Protected: Phải đăng nhập (và Service đã chặn việc chưa mua khóa học)
 router.post('/:courseId/reviews', authMiddleware.protect, reviewController.addReview);
+router.delete('reviews/:id', reviewController.deleteReview);
 
 router.use(authMiddleware.restrictTo('Instructor', 'Admin')); // Chỉ Giảng viên/Admin dùng router này
 
