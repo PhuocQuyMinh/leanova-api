@@ -10,6 +10,7 @@ router.use(authMiddleware.restrictTo('Instructor'));
 
 // 1. Lấy dữ liệu tổng quan cho trang chủ Dashboard
 router.get('/global-stats', dashboardController.getGlobalStats);
+router.get('/periodic-stats', dashboardController.getPeriodicStats);
 
 // 2. Lấy dữ liệu phân tích chi tiết của 1 khóa học
 router.get('/courses/:courseId/stats', dashboardController.getCourseSpecificStats);

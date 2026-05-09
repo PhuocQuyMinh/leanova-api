@@ -142,3 +142,57 @@ exports.getCourseSpecificStats = async (instructorId, courseId) => {
         curriculumFunnel // Cục data siêu xịn để vẽ biểu đồ
     };
 };
+
+// ==========================================
+// 3. THỐNG KÊ THEO GIAI ĐOẠN (PERIODIC STATS)
+// ==========================================
+exports.getPeriodicStats = async (instructorId, startDate, endDate) => {
+    // 1. Lấy danh sách ID các khóa học của giảng viên
+    const courses = await Course.findAll({
+        where: { instructorId },
+        attributes: ['id']
+    });
+    const courseIds = courses.map(c => c.id);
+
+    if (courseIds.length === 0) return { newEnrollments: 0, completedStudents: 0, newReviews: 0 };
+
+    // Thiết lập mốc thời gian (00:00:00 của ngày bắt đầu và 23:59:59 của ngày kết thúc)
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    // 2. Số học viên mới (Đăng ký trong khoảng thời gian này)
+    const newEnrollments = await Enrollment.count({
+        where: {
+            courseId: { [Op.in]: courseIds },
+            createdAt: { [Op.between]: [start, end] }
+        }
+    });
+
+    // 3. Số học viên hoàn thành (Đạt 100% tiến độ trong khoảng thời gian này)
+    const completedStudents = await Enrollment.count({
+        where: {
+            courseId: { [Op.in]: courseIds },
+            progressPercent: 100,
+            updatedAt: { [Op.between]: [start, end] } // Dựa trên thời điểm cập nhật tiến độ cuối cùng
+        }
+    });
+
+    // 4. Số đánh giá mới
+    const newReviews = await Review.count({
+        where: {
+            courseId: { [Op.in]: courseIds },
+            createdAt: { [Op.between]: [start, end] }
+        }
+    });
+
+    return {
+        period: { startDate, endDate },
+        stats: {
+            newEnrollments,
+            completedStudents,
+            newReviews
+        }
+    };
+};
