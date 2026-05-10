@@ -4,12 +4,17 @@ const User = require('../users/user.model');
 const Enrollment = require('../store/enrollment.model');
 const sequelize = require('../../core/database/init.mysql');
 const AppError = require('../../core/utils/appError');
+const notifService = require('../notifications/notification.service');
 
 // 1. Học viên đánh giá khóa học
 exports.addOrUpdateReview = async (userId, courseId, rating, comment) => {
     // Ktra 1: Chỉ người đã mua/ghi danh mới được đánh giá (Chống review bẩn)
     const isEnrolled = await Enrollment.findOne({ where: { userId, courseId } });
     if (!isEnrolled) throw new AppError('Bạn phải sở hữu khóa học này mới được đánh giá!', 403);
+
+    // 2. [BỔ SUNG] Truy vấn thông tin khóa học để lấy instructorId và title
+    const course = await Course.findByPk(courseId, { attributes: ['id', 'title', 'instructorId'] });
+    if (!course) throw new AppError('Không tìm thấy khóa học!', 404);
 
     const t = await sequelize.transaction();
 
@@ -50,6 +55,30 @@ exports.addOrUpdateReview = async (userId, courseId, rating, comment) => {
         );
 
         await t.commit();
+
+        // ==========================================
+        // [MỚI] GỬI THÔNG BÁO CHO GIẢNG VIÊN
+        // ==========================================
+        try {
+            // Không tự gửi thông báo nếu giảng viên tự test mua khóa học và tự review
+            if (userId !== course.instructorId) {
+                const actionText = created ? 'nhận được đánh giá mới' : 'được học viên cập nhật đánh giá';
+
+                await notifService.pushNotification({
+                    userId: course.instructorId, // ID của giảng viên
+                    title: 'Khóa học của bạn có đánh giá mới',
+                    message: `Khóa học "${course.title}" vừa ${actionText} với mức điểm ${rating} sao.`,
+                    type: 'Course',
+                    actionUrl: `/courses/${course.id}`, // Link để giảng viên bay thẳng ra xem đánh giá
+                    isSendEmail: true
+                });
+            }
+        } catch (notifError) {
+            // Bao bọc try-catch để nếu lỗi gửi mail cũng không làm sập chức năng submit đánh giá của học viên
+            console.error('Lỗi gửi thông báo khi có review mới:', notifError);
+        }
+        // ==========================================
+
         return { message: created ? 'Đã thêm đánh giá!' : 'Đã cập nhật đánh giá!', review, newAvg, newCount };
     } catch (error) {
         await t.rollback();
