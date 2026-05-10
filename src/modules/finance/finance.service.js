@@ -248,3 +248,16 @@ exports.reviewWithdrawalRequest = async (requestId, status, adminNote) => {
     await request.save();
     return request;
 };
+
+// finance.service.js
+
+// [MỚI] Lấy tỉ lệ ăn chia toàn hệ thống (Dành cho Admin xem hoặc Frontend hiển thị)
+exports.getGlobalCommission = async () => {
+    // Tìm kiếm trong bảng SystemSetting
+    const globalSetting = await SystemSetting.findByPk('DEFAULT_COMMISSION_RATE');
+
+    // Nếu có dữ liệu thì ép kiểu sang Float, nếu không có thì trả về mặc định 0.7 (70%)
+    const defaultRate = globalSetting ? parseFloat(globalSetting.value) : 0.7;
+
+    return defaultRate;
+};

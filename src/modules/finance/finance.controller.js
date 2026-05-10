@@ -96,3 +96,15 @@ exports.reviewWithdrawalRequest = catchAsync(async (req, res, next) => {
         data: { request }
     });
 });
+
+// [MỚI] Lấy tỉ lệ hoa hồng hệ thống
+exports.getGlobalCommission = catchAsync(async (req, res, next) => {
+    const rate = await financeService.getGlobalCommission();
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            commissionRate: rate // VD: 0.7
+        }
+    });
+});

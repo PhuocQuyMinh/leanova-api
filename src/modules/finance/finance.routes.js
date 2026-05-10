@@ -40,4 +40,6 @@ router.patch('/admin/instructor-commission', isAdmin, financeController.updateIn
 router.get('/admin/withdrawals', isAdmin, financeController.getAllWithdrawalRequests);
 router.patch('/admin/withdrawals/:id/status', isAdmin, financeController.reviewWithdrawalRequest);
 
+router.get('/settings/global-commission', financeController.getGlobalCommission);
+
 module.exports = router;
