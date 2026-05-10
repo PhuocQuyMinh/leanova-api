@@ -56,6 +56,8 @@ app.use('/api/instructor', instructorDashboardRoutes);
 
 app.use('/api/notification', notificationRoutes);
 
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // 3. Xử lý đường dẫn không tồn tại (404)
 app.use((req, res, next) => {
     next(new AppError(`Không tìm thấy đường dẫn ${req.originalUrl} trên hệ thống!`, 404));

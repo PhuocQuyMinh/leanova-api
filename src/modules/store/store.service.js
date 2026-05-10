@@ -18,6 +18,7 @@ const qs = require('qs');
 const OrderItem = require('../finance/order_item.model');
 const InstructorSetting = require('../finance/instructor_setting.model');
 const SystemSetting = require('../finance/system_setting.model');
+const sendEmail = require('../../core/utils/email.util');
 
 // 1. Cửa hàng: Lấy danh sách khóa học đang bán
 exports.getPublishedCourses = async () => {
@@ -188,7 +189,7 @@ exports.vnpayReturn = async (vnp_Params) => {
             // 2. Lấy giỏ hàng KÈM THEO thông tin Khóa học (giá, ID giảng viên)
             const cartItems = await CartItem.findAll({
                 where: { userId: order.userId },
-                include: [{ model: Course, attributes: ['id', 'price', 'instructorId'] }]
+                include: [{ model: Course, attributes: ['id', 'title', 'price', 'instructorId'] }]
             });
 
             // Lấy danh sách ID của các giảng viên có khóa học trong giỏ hàng
@@ -239,6 +240,52 @@ exports.vnpayReturn = async (vnp_Params) => {
 
             // 5. Xóa giỏ hàng
             await CartItem.destroy({ where: { userId: order.userId } });
+
+            // ==================================================
+            // [MỚI] BẮN EMAIL THÔNG BÁO CHO HỌC VIÊN
+            // ==================================================
+            try {
+                // Lấy thông tin user (đã có model User được import sẵn ở đầu file)
+                const user = await User.findByPk(order.userId, { attributes: ['fullName', 'email'] });
+
+                if (user && user.email) {
+                    // Lấy danh sách tên khóa học để hiện đẹp trong mail
+                    const courseListHTML = cartItems.map(item => {
+                        const courseName = item.Course?.title || 'Khóa học không tên';
+                        const coursePrice = `${item.Course?.price.toLocaleString('vi-VN')} VNĐ` || 'Free';
+
+                        return `<li><strong>${courseName}: ${coursePrice} </strong></li>`;
+                    }).join('');
+
+                    await sendEmail({
+                        email: user.email,
+                        subject: `Xác nhận thanh toán thành công đơn hàng #${order.txnRef} - Leanova`,
+                        html: `
+                            <div style="font-family: sans-serif; line-height: 1.6;">
+                                <h2 style="color: #4CAF50;">Thanh toán thành công!</h2>
+                                <p>Xin chào <strong>${user.fullName}</strong>,</p>
+                                <p>Cảm ơn bạn đã mua sắm tại Leanova. Đơn hàng <strong>#${order.txnRef}</strong> của bạn đã được thanh toán thành công.</p>
+                                
+                                <p>Các khóa học bạn vừa sở hữu bao gồm:</p>
+                                <ul>
+                                    ${courseListHTML}
+                                </ul>
+                                
+                                <p>Tổng số tiền thanh toán: <strong>${order.amount.toLocaleString('vi-VN')} VNĐ</strong></p>
+                                
+                                <p>Bạn có thể đăng nhập vào hệ thống và truy cập mục <strong>"Không gian học tập"</strong> để bắt đầu học ngay bây giờ.</p>
+                                
+                                <br>
+                                <p>Trân trọng,<br><strong>Đội ngũ Leanova</strong></p>
+                            </div>
+                        `
+                    });
+                }
+            } catch (error) {
+                // Dùng try...catch để nếu gửi mail lỗi (VD: sai mật khẩu mail), 
+                // luồng code vẫn chạy tiếp để báo thành công cho VNPay, tránh việc user bị trừ tiền nhưng web báo lỗi.
+                console.error('Lỗi gửi email xác nhận thanh toán:', error);
+            }
 
             return { code: '00', message: 'Thanh toán thành công! Khóa học đã được mở.' };
         } else {
