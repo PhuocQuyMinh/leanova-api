@@ -5,7 +5,7 @@ const sendEmail = require('../../core/utils/email.util');
 // ==========================================
 // 1. HÀM DÙNG CHUNG CHO CÁC MODULE KHÁC GỌI
 // ==========================================
-exports.pushNotification = async ({ userId, title, message, type, actionUrl, isSendEmail = false }) => {
+exports.pushNotification = async ({ userId, title, message, type, actionUrl, isSendEmail = false, customHtml = null }) => {
     // 1. Lưu thông báo vào Database (In-app)
     const notification = await Notification.create({
         userId,
@@ -24,7 +24,7 @@ exports.pushNotification = async ({ userId, title, message, type, actionUrl, isS
                     email: user.email,
                     subject: title,
                     // Template HTML cơ bản, bạn có thể làm đẹp hơn sau
-                    html: `
+                    html: customHtml ? customHtml : `
                         <h3>Xin chào ${user.fullName},</h3>
                         <p>${message}</p>
                         ${actionUrl ? `<a href="${process.env.FRONTEND_URL}${actionUrl}">Nhấn vào đây để xem chi tiết</a>` : ''}

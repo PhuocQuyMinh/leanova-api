@@ -19,6 +19,7 @@ const OrderItem = require('../finance/order_item.model');
 const InstructorSetting = require('../finance/instructor_setting.model');
 const SystemSetting = require('../finance/system_setting.model');
 const sendEmail = require('../../core/utils/email.util');
+const notifService = require('../notifications/notification.service');
 
 // 1. Cửa hàng: Lấy danh sách khóa học đang bán
 exports.getPublishedCourses = async () => {
@@ -285,6 +286,71 @@ exports.vnpayReturn = async (vnp_Params) => {
                 // Dùng try...catch để nếu gửi mail lỗi (VD: sai mật khẩu mail), 
                 // luồng code vẫn chạy tiếp để báo thành công cho VNPay, tránh việc user bị trừ tiền nhưng web báo lỗi.
                 console.error('Lỗi gửi email xác nhận thanh toán:', error);
+            }
+
+            // ==================================================
+            // [MỚI] BẮN THÔNG BÁO CHO TỪNG GIẢNG VIÊN CÓ KHÓA HỌC ĐƯỢC MUA
+            // ==================================================
+            try {
+                // 1. Gom nhóm khóa học theo từng Giảng viên
+                // Mục tiêu: gom từ [{courseId: 1, instructorId: A}, {courseId: 2, instructorId: A}, {courseId: 3, instructorId: B}]
+                // Thành: { A: [course1, course2], B: [course3] }
+                const instructorCoursesMap = {};
+
+                orderItemsData.forEach(item => { // orderItemsData đã chứa sẵn commissionRate và instructorEarnings từ trên
+                    if (!instructorCoursesMap[item.instructorId]) {
+                        instructorCoursesMap[item.instructorId] = [];
+                    }
+                    // Tìm tên khóa học từ cartItems gốc
+                    const courseDetail = cartItems.find(cItem => cItem.Course.id === item.courseId);
+
+                    instructorCoursesMap[item.instructorId].push({
+                        courseName: courseDetail.Course.title,
+                        price: item.priceAtPurchase,
+                        commissionRate: item.commissionRate,
+                        earnings: item.instructorEarnings
+                    });
+                });
+
+                // 2. Lặp qua từng Giảng viên để gửi thông báo
+                for (const [instructorId, purchasedCourses] of Object.entries(instructorCoursesMap)) {
+
+                    let totalEarningsThisOrder = 0;
+                    let courseListHtml = '';
+
+                    // Tính tổng thu nhập của ông Giảng viên này trong cái giỏ hàng này
+                    // và nối chuỗi HTML danh sách khóa học
+                    purchasedCourses.forEach(course => {
+                        totalEarningsThisOrder += course.earnings;
+                        courseListHtml += `
+                            <li>
+                                <strong>${course.courseName}</strong><br>
+                                Giá bán: ${course.price.toLocaleString('vi-VN')} VNĐ<br>
+                                Tỉ lệ hoa hồng: ${(course.commissionRate * 100)}%<br>
+                                Thu nhập của bạn: <span style="color: #4CAF50; font-weight: bold;">+${course.earnings.toLocaleString('vi-VN')} VNĐ</span>
+                            </li><br>
+                        `;
+                    });
+
+                    // 3. Gửi Notification (Cả in-app và qua Email)
+                    // (Lưu ý: notifService.pushNotification sẽ tự động query bảng User để lấy Email của giảng viên)
+                    await notifService.pushNotification({
+                        userId: instructorId,
+                        title: 'Ting ting! Bạn vừa có lượt đăng ký khóa học mới',
+                        message: `Khóa học của bạn vừa được mua. Bạn nhận được ${totalEarningsThisOrder.toLocaleString('vi-VN')} VNĐ vào tài khoản doanh thu.`,
+                        type: 'Payment', // Loại thông báo liên quan đến tiền bạc
+                        actionUrl: '/instructor/revenue', // Dẫn họ về trang xem doanh thu
+                        isSendEmail: true,
+                        customHtml: courseListHtml
+                        // Nếu bạn muốn truyền thêm HTML tự tạo vào email, bạn sẽ cần nâng cấp hàm pushNotification 
+                        // bên file notification.service.js để nhận thêm biến customHtml. 
+                        // (Hoặc tạm thời message dạng text như trên là hệ thống cũng đã gửi mail được rồi)
+                    });
+                }
+
+            } catch (instructorNotifError) {
+                // Tương tự, lỗi thông báo không được phép làm sập giao dịch
+                console.error('Lỗi khi gửi thông báo ting ting cho Giảng viên:', instructorNotifError);
             }
 
             return { code: '00', message: 'Thanh toán thành công! Khóa học đã được mở.' };
