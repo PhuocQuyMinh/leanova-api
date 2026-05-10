@@ -6,6 +6,7 @@ const Order = require('../store/order.model');
 const WithdrawalRequest = require('./withdrawal_request.model');
 const InstructorSetting = require('./instructor_setting.model');
 const SystemSetting = require('./system_setting.model');
+const notifService = require('../notifications/notification.service'); // [MỚI] Thêm dòng này
 
 // 1. Lấy thông số Tổng quan (Doanh thu & Số dư)
 exports.getDashboardStats = async (instructorId) => {
@@ -246,6 +247,43 @@ exports.reviewWithdrawalRequest = async (requestId, status, adminNote) => {
     }
 
     await request.save();
+
+    // ==========================================
+    // [MỚI] GỬI THÔNG BÁO CHO GIẢNG VIÊN
+    // ==========================================
+    try {
+        let notifTitle = '';
+        let notifMessage = '';
+        const formattedAmount = request.amount.toLocaleString('vi-VN');
+
+        // Phân loại nội dung theo trạng thái xử lý
+        if (status === 'Approved') {
+            notifTitle = 'Yêu cầu rút tiền đã được duyệt';
+            notifMessage = `Yêu cầu rút ${formattedAmount} VNĐ của bạn đã được ban quản trị phê duyệt. Chúng tôi đang tiến hành thủ tục chuyển khoản vào ngân hàng của bạn.`;
+        } else if (status === 'Completed') {
+            notifTitle = '💰 Giải ngân thành công';
+            notifMessage = `Số tiền ${formattedAmount} VNĐ đã được chuyển khoản thành công. Vui lòng kiểm tra số dư trong ứng dụng ngân hàng của bạn.`;
+        } else if (status === 'Rejected') {
+            notifTitle = '❌ Yêu cầu rút tiền bị từ chối';
+            notifMessage = `Yêu cầu rút ${formattedAmount} VNĐ của bạn đã bị từ chối. Lý do từ Admin: "${adminNote}". Vui lòng kiểm tra lại thông tin ngân hàng hoặc liên hệ bộ phận hỗ trợ.`;
+        }
+
+        if (notifTitle) {
+            await notifService.pushNotification({
+                userId: request.instructorId, // ID giảng viên gửi lệnh rút
+                title: notifTitle,
+                message: notifMessage,
+                type: 'Payment', // Loại thông báo: Tài chính/Thanh toán
+                actionUrl: '/instructor/revenue', // Link dẫn giảng viên về trang Quản lý doanh thu
+                isSendEmail: true // Bắt buộc bắn mail để đối soát
+            });
+        }
+    } catch (notifError) {
+        // Bọc trong try/catch để nếu SMTP (server mail) chết thì API duyệt tiền của Admin vẫn chạy thành công
+        console.error(`Lỗi gửi thông báo khi xử lý rút tiền (Status: ${status}):`, notifError);
+    }
+    // ==========================================
+
     return request;
 };
 
