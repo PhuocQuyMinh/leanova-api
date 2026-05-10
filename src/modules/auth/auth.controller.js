@@ -44,3 +44,33 @@ exports.googleLogin = catchAsync(async (req, res, next) => {
         data: { user }
     });
 });
+
+// Yêu cầu gửi link đổi mật khẩu
+exports.forgotPassword = catchAsync(async (req, res, next) => {
+    if (!req.body.email) {
+        return next(new AppError('Vui lòng cung cấp email của bạn!', 400));
+    }
+
+    const result = await authService.forgotPassword(req.body.email);
+
+    res.status(200).json({
+        status: 'success',
+        message: result.message
+    });
+});
+
+// Đặt lại mật khẩu mới
+exports.resetPassword = catchAsync(async (req, res, next) => {
+    if (!req.body.password) {
+        return next(new AppError('Vui lòng cung cấp mật khẩu mới!', 400));
+    }
+
+    // Token sẽ được lấy từ params trên URL (VD: /api/auth/reset-password/:token)
+    const result = await authService.resetPassword(req.params.token, req.body.password);
+
+    res.status(200).json({
+        status: 'success',
+        message: result.message,
+        token: result.token
+    });
+});

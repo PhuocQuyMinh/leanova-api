@@ -71,6 +71,15 @@ const User = sequelize.define('User', {
     emailVerificationExpires: {
         type: DataTypes.DATE,
         allowNull: true
+    },
+    // [MỚI] Hỗ trợ Quên mật khẩu
+    passwordResetToken: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    passwordResetExpires: {
+        type: DataTypes.DATE,
+        allowNull: true
     }
 }, {
     tableName: 'users',

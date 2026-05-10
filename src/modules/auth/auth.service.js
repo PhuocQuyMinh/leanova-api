@@ -158,3 +158,102 @@ exports.loginWithGoogle = async (idToken) => {
         token
     };
 };
+
+// ... các require đã có (crypto, sendEmail, User...)
+
+// ==========================================
+// 5. YÊU CẦU QUÊN MẬT KHẨU (GỬI MAIL)
+// ==========================================
+exports.forgotPassword = async (email) => {
+    // 1. Tìm user dựa vào email
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+        throw new AppError('Không tìm thấy tài khoản nào với địa chỉ email này!', 404);
+    }
+
+    // (Tùy chọn) Nếu user này đăng nhập bằng Google thì không cho đổi pass ở đây
+    if (user.authProvider === 'Google') {
+        throw new AppError('Tài khoản này được đăng nhập bằng Google. Vui lòng đổi mật khẩu trên hệ thống của Google!', 400);
+    }
+
+    // 2. Tạo Token ngẫu nhiên
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // 3. Băm Token để lưu vào DB (Bảo mật)
+    user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.passwordResetExpires = Date.now() + 15 * 60 * 1000; // Token chỉ sống được 15 phút
+
+    await user.save({ validate: false });
+
+    // 4. Gửi email
+    // const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `test/reset-password?token=${resetToken}`;
+
+    // DEBUG: In link ra terminal để test dễ hơn
+    console.log('\n--- LINK ĐẶT LẠI MẬT KHẨU CỦA BẠN ĐÂY ---');
+    console.log(resetUrl);
+    console.log('-----------------------------------------\n');
+
+    const message = `
+        <h2>Yêu cầu đặt lại mật khẩu</h2>
+        <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản Leanova. Vui lòng nhấn vào nút bên dưới để tạo mật khẩu mới:</p>
+        <a href="${resetUrl}" style="padding: 10px 20px; background-color: #f44336; color: white; text-decoration: none; border-radius: 5px;">Đặt lại mật khẩu</a>
+        <p><i>Lưu ý: Link này sẽ hết hạn sau 15 phút. Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</i></p>
+    `;
+
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: 'Đặt lại mật khẩu tài khoản Leanova của bạn (Hợp lệ trong 15 phút)',
+            html: message
+        });
+
+        return { message: 'Đường dẫn đặt lại mật khẩu đã được gửi vào email của bạn!' };
+    } catch (err) {
+        // Nếu gửi mail lỗi, phải xóa Token trong DB đi để họ có thể gửi lại
+        user.passwordResetToken = null;
+        user.passwordResetExpires = null;
+        await user.save({ validate: false });
+
+        throw new AppError('Có lỗi xảy ra khi gửi email. Vui lòng thử lại sau!', 500);
+    }
+};
+
+// ==========================================
+// 6. ĐẶT LẠI MẬT KHẨU MỚI
+// ==========================================
+exports.resetPassword = async (token, newPassword) => {
+    // 1. Băm cái token do user gửi lên để tìm trong DB
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // 2. Tìm user dựa vào token VÀ thời gian hết hạn phải lớn hơn hiện tại
+    const user = await User.findOne({
+        where: {
+            passwordResetToken: hashedToken,
+            passwordResetExpires: { [require('sequelize').Op.gt]: new Date() }
+        }
+    });
+
+    // 3. Nếu không tìm thấy hoặc token hết hạn
+    if (!user) {
+        throw new AppError('Token không hợp lệ hoặc đã hết hạn!', 400);
+    }
+
+    // 4. Cập nhật mật khẩu mới (Model User sẽ tự động băm password này nhờ hook beforeSave)
+    user.password = newPassword;
+
+    // Xóa token đi để không bị dùng lại
+    user.passwordResetToken = null;
+    user.passwordResetExpires = null;
+
+    await user.save();
+
+    // 5. Cấp lại luôn một JWT Token mới để họ tự động đăng nhập sau khi đổi pass xong
+    const jwtToken = signToken(user.id, user.role);
+
+    return {
+        message: 'Mật khẩu của bạn đã được thay đổi thành công!',
+        user,
+        token: jwtToken
+    };
+};
