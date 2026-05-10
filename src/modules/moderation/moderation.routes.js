@@ -4,6 +4,8 @@ const authMiddleware = require('../../core/middlewares/auth.middleware');
 const upload = require('../../core/middlewares/upload.middleware'); // Import multer
 
 const router = express.Router();
+// Get system term
+router.get('/settings/instructor-terms', moderationController.getTerms);
 
 router.use(authMiddleware.protect); // Yêu cầu đăng nhập
 
@@ -28,5 +30,8 @@ router.put('/instructor-requests/:requestId/review', moderationController.review
 router.get('/pending-courses', moderationController.getPendingCourses);
 router.get('/courses/:courseId', moderationController.getCourseDetail);
 router.put('/courses/:courseId/review', moderationController.reviewCourse);
+
+// Admin cập nhật nội dung HTML mới cho điều khoản
+router.patch('/settings/instructor-terms', authMiddleware.restrictTo('Admin'), moderationController.updateTerms);
 
 module.exports = router;

@@ -7,7 +7,7 @@ const SystemSetting = sequelize.define('SystemSetting', {
         primaryKey: true // VD: 'DEFAULT_COMMISSION_RATE'
     },
     value: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT('long'),
         allowNull: false
     },
     description: { type: DataTypes.TEXT, allowNull: true }

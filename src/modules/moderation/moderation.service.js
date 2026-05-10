@@ -11,6 +11,7 @@ const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
 const notifService = require('../notifications/notification.service');
 const { Op } = require('sequelize'); // [MỚI] Thêm dòng này vào đầu file
+const SystemSetting = require('../finance/system_setting.model');
 
 // Cấu hình Cloudinary (Đảm bảo bạn đã có các biến này trong file .env)
 cloudinary.config({
@@ -135,6 +136,10 @@ exports.getCourseDetailForMod = async (courseId) => {
 
 // 2.1 Học viên nộp đơn đăng ký (ĐÃ CẬP NHẬT LUỒNG UPLOAD)
 exports.createInstructorRequest = async (userId, requestData, file) => {
+    if (requestData.isTermsAccepted !== 'true' && requestData.isTermsAccepted !== true) {
+        throw new AppError('Bạn bắt buộc phải đọc và đồng ý với Điều khoản sử dụng!', 400);
+    }
+
     // 1. Kiểm tra xem có đơn nào đang Pending không
     const existingRequest = await InstructorRequest.findOne({ where: { userId, status: 'Pending' } });
     if (existingRequest) throw new AppError('Bạn đang có một đơn chờ duyệt rồi!', 400);
@@ -167,7 +172,8 @@ exports.createInstructorRequest = async (userId, requestData, file) => {
         bio: requestData.bio,
         experience: requestData.experience,
         portfolioUrl: requestData.portfolioUrl,
-        certificateUrl: certificateUrl
+        certificateUrl: certificateUrl,
+        isTermsAccepted: true // Ghi nhận sự đồng ý của người dùng
     });
 
     // ==========================================
@@ -305,4 +311,36 @@ exports.reviewInstructorRequest = async (requestId, action, rejectReason = '') =
         await t.rollback();
         throw error;
     }
+};
+
+// 1. Lấy nội dung điều khoản (Public)
+exports.getInstructorTerms = async () => {
+    const setting = await SystemSetting.findByPk('INSTRUCTOR_TERMS_CONTENT');
+    if (!setting) {
+        throw new AppError('Nội dung điều khoản chưa được thiết lập!', 404);
+    }
+    return setting.value;
+};
+
+// 2. Cập nhật nội dung điều khoản (Admin)
+exports.updateInstructorTerms = async (newContent) => {
+    if (!newContent) {
+        throw new AppError('Nội dung điều khoản không được để trống!', 400);
+    }
+
+    // findOrCreate hoặc update nếu đã tồn tại
+    let [setting, created] = await SystemSetting.findOrCreate({
+        where: { key: 'INSTRUCTOR_TERMS_CONTENT' },
+        defaults: {
+            value: newContent,
+            description: 'Nội dung Điều khoản sử dụng dành cho Giảng viên (HTML)'
+        }
+    });
+
+    if (!created) {
+        setting.value = newContent;
+        await setting.save();
+    }
+
+    return setting;
 };

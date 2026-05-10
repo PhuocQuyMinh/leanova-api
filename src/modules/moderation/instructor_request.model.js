@@ -23,7 +23,11 @@ const InstructorRequest = sequelize.define('InstructorRequest', {
         type: DataTypes.ENUM('Pending', 'Approved', 'Rejected'),
         defaultValue: 'Pending'
     },
-
+    isTermsAccepted: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false // Mặc định là chưa đồng ý
+    },
     // Lý do từ chối (Nếu Mod reject thì phải điền cột này)
     rejectReason: { type: DataTypes.TEXT, allowNull: true }
 }, {

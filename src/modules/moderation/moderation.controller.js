@@ -66,3 +66,24 @@ exports.getRequestDetail = catchAsync(async (req, res, next) => {
         data: { request }
     });
 });
+
+// Lấy điều khoản cho mọi người xem
+exports.getTerms = catchAsync(async (req, res, next) => {
+    const terms = await moderationService.getInstructorTerms();
+
+    res.status(200).json({
+        status: 'success',
+        data: { terms }
+    });
+});
+
+// Admin cập nhật điều khoản mới
+exports.updateTerms = catchAsync(async (req, res, next) => {
+    const updatedSetting = await moderationService.updateInstructorTerms(req.body.content);
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Cập nhật điều khoản thành công!',
+        data: { setting: updatedSetting }
+    });
+});
