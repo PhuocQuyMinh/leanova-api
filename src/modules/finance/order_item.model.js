@@ -2,6 +2,7 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../../core/database/init.mysql');
 const Order = require('../store/order.model');
 const Course = require('../courses/course.model');
+const User = require('../users/user.model');
 
 const OrderItem = sequelize.define('OrderItem', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -18,5 +19,8 @@ const OrderItem = sequelize.define('OrderItem', {
 
 Order.hasMany(OrderItem, { foreignKey: 'orderId', as: 'items' });
 OrderItem.belongsTo(Order, { foreignKey: 'orderId' });
+
+User.hasMany(OrderItem, { foreignKey: 'instructorId', as: 'items' });
+OrderItem.belongsTo(User, { foreignKey: 'instructorId' });
 
 module.exports = OrderItem;

@@ -44,4 +44,11 @@ router.get('/settings/global-commission', financeController.getGlobalCommission)
 
 router.get('/platform-stats', financeController.getPlatformStats);
 
+router.get(
+    '/top-instructors',
+    authMiddleware.protect,
+    authMiddleware.restrictTo('Admin'),
+    financeController.getTopInstructors
+);
+
 module.exports = router;

@@ -119,3 +119,15 @@ exports.getPlatformStats = catchAsync(async (req, res, next) => {
         data: stats
     });
 });
+
+exports.getTopInstructors = catchAsync(async (req, res, next) => {
+    const topInstructors = await financeService.getTopInstructors();
+
+    res.status(200).json({
+        status: 'success',
+        results: topInstructors.length,
+        data: {
+            instructors: topInstructors
+        }
+    });
+});

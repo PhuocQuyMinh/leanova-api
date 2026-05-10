@@ -7,6 +7,7 @@ const WithdrawalRequest = require('./withdrawal_request.model');
 const InstructorSetting = require('./instructor_setting.model');
 const SystemSetting = require('./system_setting.model');
 const notifService = require('../notifications/notification.service'); // [MỚI] Thêm dòng này
+const User = require('../users/user.model');
 
 // 1. Lấy thông số Tổng quan (Doanh thu & Số dư)
 exports.getDashboardStats = async (instructorId) => {
@@ -347,4 +348,29 @@ exports.getPlatformStats = async (queryData) => {
         totalInstructorEarnings: totalTransactionValue - platformProfit,
         period: startDate && endDate ? `${startDate} - ${endDate}` : 'Toàn thời gian'
     };
+};
+
+// [MỚI] Lấy Top 3 Giảng viên có doanh thu cao nhất
+exports.getTopInstructors = async () => {
+    return await OrderItem.findAll({
+        attributes: [
+            'instructorId',
+            [sequelize.fn('SUM', sequelize.col('priceAtPurchase')), 'totalSales'],
+            [sequelize.fn('COUNT', sequelize.col('OrderItem.id')), 'courseSold']
+        ],
+        include: [
+            {
+                model: Order,
+                where: { status: 'Success' }, // Chỉ tính các đơn đã thanh toán thành công
+                attributes: [] // Không lấy dữ liệu bảng Order
+            },
+            {
+                model: User, // Liên kết sang bảng User để lấy tên
+                attributes: ['id', 'fullName', 'avatarUrl']
+            }
+        ],
+        group: ['instructorId'], // Nhóm theo từng giảng viên
+        order: [[sequelize.literal('totalSales'), 'DESC']], // Sắp xếp doanh thu giảm dần
+        limit: 3 // Chỉ lấy 3 người đầu bảng
+    });
 };
