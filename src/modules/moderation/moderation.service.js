@@ -9,6 +9,7 @@ const Attachment = require('../courses/attachment.model');
 const Quiz = require('../courses/quiz.model');
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
+const notifService = require('../notifications/notification.service');
 
 // Cấu hình Cloudinary (Đảm bảo bạn đã có các biến này trong file .env)
 cloudinary.config({
@@ -195,6 +196,27 @@ exports.reviewInstructorRequest = async (requestId, action, rejectReason = '') =
 
         // Nếu mọi thứ chạy êm đẹp, Commit lưu vào DB
         await t.commit();
+
+        // ==========================================
+        // GỬI THÔNG BÁO (SAU KHI COMMIT THÀNH CÔNG)
+        // ==========================================
+        if (action === 'Approve') {
+            // Bọc trong try-catch riêng để "luồng này có chết cũng không ảnh hưởng" đến kết quả duyệt
+            try {
+                await notifService.pushNotification({
+                    userId: request.userId,
+                    title: 'Chúc mừng! Bạn đã trở thành giảng viên tại Leanova',
+                    message: 'Hồ sơ của bạn đã được phê duyệt. Bây giờ bạn có thể bắt đầu tạo khóa học và chia sẻ kiến thức của mình.',
+                    type: 'Account',
+                    actionUrl: '/instructor/dashboard', // Link dẫn về trang quản lý của giảng viên
+                    isSendEmail: true
+                });
+            } catch (notifError) {
+                // Chỉ log lỗi để dev theo dõi, không ném lỗi ra ngoài làm hỏng luồng chính
+                console.error('Lỗi gửi thông báo chúc mừng giảng viên:', notifError);
+            }
+        }
+
         return request;
 
     } catch (error) {
