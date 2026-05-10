@@ -37,4 +37,7 @@ router.delete('/cart/:courseId', storeController.removeFromCart);
 // Favorites API
 router.post('/courses/:courseId/favorite', storeController.toggleFavorite);
 router.get('/my-favorites', storeController.getMyFavorites);
+
+// Route Mới: Private (Chỉ học viên đã đăng nhập)
+router.get('/my-courses', storeController.searchMyCourses);
 module.exports = router;

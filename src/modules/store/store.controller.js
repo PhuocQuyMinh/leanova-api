@@ -1,4 +1,5 @@
 const storeService = require('./store.service');
+const searchService = require('./search.service');
 const catchAsync = require('../../core/utils/catchAsync');
 
 exports.getPublishedCourses = catchAsync(async (req, res, next) => {
@@ -90,4 +91,15 @@ exports.toggleFavorite = catchAsync(async (req, res, next) => {
 exports.getMyFavorites = catchAsync(async (req, res, next) => {
     const favorites = await storeService.getMyFavorites(req.user.id);
     res.status(200).json({ status: 'success', data: { favorites } });
+});
+
+exports.searchMyCourses = catchAsync(async (req, res, next) => {
+    // req.user.id được lấy từ authMiddleware.protect
+    // req.query chứa các tham số từ URL (keyword, minProgress, page...)
+    const result = await searchService.searchMyEnrollments(req.user.id, req.query);
+
+    res.status(200).json({
+        status: 'success',
+        data: result
+    });
 });

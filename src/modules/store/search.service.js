@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const Course = require('../courses/course.model');
 const User = require('../users/user.model');
 const Category = require('../categories/category.model');
+const Enrollment = require('../store/enrollment.model');
 
 exports.searchCourses = async (queryData) => {
     // 1. Lấy các tham số từ query string, gán giá trị mặc định nếu không có
@@ -74,5 +75,74 @@ exports.searchCourses = async (queryData) => {
         totalPages: Math.ceil(count / limit),
         currentPage: parseInt(page),
         courses: rows
+    };
+};
+
+// [MỚI] API tìm kiếm và lọc khóa học đã đăng ký
+exports.searchMyEnrollments = async (userId, queryData) => {
+    const {
+        keyword,
+        instructorId,
+        minProgress,
+        maxProgress,
+        sortBy = 'createdAt', // Mặc định sắp xếp theo ngày đăng ký (mới nhất)
+        order = 'DESC',
+        page = 1,
+        limit = 10
+    } = queryData;
+
+    // 1. Điều kiện lọc trên bảng Enrollment (Bắt buộc phải của user này)
+    const enrollmentWhere = { userId: userId };
+
+    // Lọc theo tiến độ học tập (progressPercent)
+    if (minProgress !== undefined || maxProgress !== undefined) {
+        enrollmentWhere.progressPercent = {};
+        if (minProgress !== undefined) enrollmentWhere.progressPercent[Op.gte] = parseInt(minProgress);
+        if (maxProgress !== undefined) enrollmentWhere.progressPercent[Op.lte] = parseInt(maxProgress);
+    }
+
+    // 2. Điều kiện lọc trên bảng Course (Tên khóa học & Giảng viên)
+    const courseWhere = {};
+    if (keyword) {
+        courseWhere.title = { [Op.like]: `%${keyword}%` };
+    }
+    if (instructorId) {
+        courseWhere.instructorId = instructorId;
+    }
+
+    // 3. Xử lý sắp xếp
+    const allowedSortFields = ['createdAt', 'progressPercent', 'updatedAt'];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    // 4. Xử lý phân trang
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // 5. Thực thi truy vấn
+    const { count, rows } = await Enrollment.findAndCountAll({
+        where: enrollmentWhere,
+        include: [
+            {
+                model: Course,
+                // Chỉ apply where nếu có điều kiện (keyword hoặc instructorId), ngược lại để undefined để lấy hết
+                where: Object.keys(courseWhere).length > 0 ? courseWhere : undefined,
+                attributes: ['id', 'title', 'coverImage'],
+                include: [
+                    { model: User, as: 'instructor', attributes: ['id', 'fullName'] }
+                ]
+            }
+        ],
+        order: [[sortField, sortOrder]],
+        limit: parseInt(limit),
+        offset: offset,
+        distinct: true // Bắt buộc phải có khi dùng limit với include để đếm 'count' cho chuẩn xác
+    });
+
+    // 6. Trả về kết quả
+    return {
+        totalItems: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: parseInt(page),
+        enrollments: rows
     };
 };
