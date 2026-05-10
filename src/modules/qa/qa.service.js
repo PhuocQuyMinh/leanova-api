@@ -231,6 +231,46 @@ exports.requestDeleteQuestion = async (userId, questionId, reason) => {
     question.deletionReason = reason;
     await question.save();
 
+    // ==========================================
+    // [MỚI] GỬI THÔNG BÁO CHO MODERATOR/ADMIN
+    // ==========================================
+    try {
+        // 1. Lấy tên giảng viên để cá nhân hóa thông báo
+        const instructor = await User.findByPk(userId, { attributes: ['fullName'] });
+        const instructorName = instructor ? instructor.fullName : 'Một giảng viên';
+
+        // 2. Tìm tất cả các tài khoản có quyền duyệt bài (Mod hoặc Admin)
+        const moderators = await User.findAll({
+            where: {
+                role: {
+                    [Op.in]: ['Moderator']
+                }
+            },
+            attributes: ['id'] // Chỉ lấy ID cho nhẹ server
+        });
+
+        // 3. Gửi thông báo nếu có Moderator trong hệ thống
+        if (moderators.length > 0) {
+            const notificationPromises = moderators.map(mod =>
+                notifService.pushNotification({
+                    userId: mod.id,
+                    title: 'Có yêu cầu xóa câu hỏi mới',
+                    message: `Giảng viên ${instructorName} vừa yêu cầu xóa một câu hỏi với lý do: "${reason}". Vui lòng kiểm tra và xử lý.`,
+                    type: 'System', // Phân loại hệ thống cho Mod
+                    actionUrl: `/admin/pending-deletions`, // Dẫn Mod vào thẳng trang danh sách cần xóa
+                    isSendEmail: true
+                })
+            );
+
+            // Bắn thông báo đồng loạt (Song song)
+            await Promise.all(notificationPromises);
+        }
+    } catch (notifError) {
+        // Bao bọc try-catch để lỗi gửi mail không làm chết API yêu cầu xóa của giảng viên
+        console.error('Lỗi khi gửi thông báo cho Mod về yêu cầu xóa câu hỏi:', notifError);
+    }
+    // ==========================================
+
     return question;
 };
 
