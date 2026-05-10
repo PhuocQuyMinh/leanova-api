@@ -68,3 +68,16 @@ exports.vnpayReturn = catchAsync(async (req, res, next) => {
     }
     res.status(200).json({ status: 'success', data: result });
 });
+
+// [MỚI] Xóa khóa học khỏi giỏ
+exports.removeFromCart = catchAsync(async (req, res, next) => {
+    // req.user.id có được từ middleware auth.protect
+    // req.params.courseId lấy từ URL (VD: DELETE /api/cart/15)
+    await storeService.removeFromCart(req.user.id, req.params.courseId);
+
+    // Trả về status 204 No Content (chuẩn RESTful API cho tác vụ xóa thành công)
+    res.status(204).json({
+        status: 'success',
+        data: null
+    });
+});

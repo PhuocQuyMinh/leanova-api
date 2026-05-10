@@ -31,4 +31,7 @@ router.put('/my-learning/:courseId/lessons/:lessonId/complete', storeController.
 // [MỚI] Nộp bài kiểm tra trắc nghiệm
 router.post('/my-learning/quizzes/:quizId/submit', storeController.submitQuiz);
 
+// [MỚI] Route để xóa 1 khóa học khỏi giỏ hàng
+router.delete('/cart/:courseId', storeController.removeFromCart);
+
 module.exports = router;
