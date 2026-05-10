@@ -81,3 +81,13 @@ exports.removeFromCart = catchAsync(async (req, res, next) => {
         data: null
     });
 });
+
+exports.toggleFavorite = catchAsync(async (req, res, next) => {
+    const result = await storeService.toggleFavorite(req.user.id, req.params.courseId);
+    res.status(200).json({ status: 'success', data: result });
+});
+
+exports.getMyFavorites = catchAsync(async (req, res, next) => {
+    const favorites = await storeService.getMyFavorites(req.user.id);
+    res.status(200).json({ status: 'success', data: { favorites } });
+});

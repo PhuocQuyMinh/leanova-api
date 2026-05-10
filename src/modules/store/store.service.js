@@ -20,6 +20,7 @@ const InstructorSetting = require('../finance/instructor_setting.model');
 const SystemSetting = require('../finance/system_setting.model');
 const sendEmail = require('../../core/utils/email.util');
 const notifService = require('../notifications/notification.service');
+const Favorite = require('../favorites/favorite.model'); // Import model mới
 
 // 1. Cửa hàng: Lấy danh sách khóa học đang bán
 exports.getPublishedCourses = async () => {
@@ -552,4 +553,36 @@ exports.submitQuiz = async (userId, quizId, userAnswers) => {
         isPassed,
         passingScore: quiz.passingScorePercent
     };
+};
+
+// 1. Toggle Favorite (Thêm hoặc Xóa khỏi mục yêu thích)
+exports.toggleFavorite = async (userId, courseId) => {
+    // Kiểm tra khóa học có tồn tại và đang bán không
+    const course = await Course.findOne({ where: { id: courseId, status: 'Published' } });
+    if (!course) throw new AppError('Khóa học không tồn tại hoặc chưa được xuất bản!', 404);
+
+    const existingFavorite = await Favorite.findOne({ where: { userId, courseId } });
+
+    if (existingFavorite) {
+        // Nếu đã yêu thích rồi -> Xóa đi
+        await existingFavorite.destroy();
+        return { isFavorite: false, message: 'Đã xóa khỏi mục yêu thích' };
+    } else {
+        // Nếu chưa -> Thêm mới
+        await Favorite.create({ userId, courseId });
+        return { isFavorite: true, message: 'Đã thêm vào mục yêu thích' };
+    }
+};
+
+// 2. Lấy danh sách khóa học yêu thích của tôi
+exports.getMyFavorites = async (userId) => {
+    return await Favorite.findAll({
+        where: { userId },
+        include: [{
+            model: Course,
+            attributes: ['id', 'title', 'price', 'coverImage', 'averageRating'],
+            include: [{ model: User, as: 'instructor', attributes: ['fullName'] }]
+        }],
+        order: [['createdAt', 'DESC']]
+    });
 };

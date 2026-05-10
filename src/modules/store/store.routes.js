@@ -34,4 +34,7 @@ router.post('/my-learning/quizzes/:quizId/submit', storeController.submitQuiz);
 // [MỚI] Route để xóa 1 khóa học khỏi giỏ hàng
 router.delete('/cart/:courseId', storeController.removeFromCart);
 
+// Favorites API
+router.post('/courses/:courseId/favorite', storeController.toggleFavorite);
+router.get('/my-favorites', storeController.getMyFavorites);
 module.exports = router;
