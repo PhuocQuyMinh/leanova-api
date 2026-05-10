@@ -28,27 +28,51 @@ const checkAccessRight = async (userId, lessonId) => {
     const instructorId = lesson.Section.Course.instructorId;
 
     // 3. Phân quyền
-    if (instructorId === userId) return { courseId, isInstructor: true };
+    if (instructorId === userId) return { courseId, isInstructor: true, instructorId };
 
     const isEnrolled = await Enrollment.findOne({ where: { userId, courseId } });
     if (!isEnrolled) {
         throw new AppError('Bạn phải sở hữu khóa học này mới được tham gia thảo luận!', 403);
     }
 
-    return { courseId, isInstructor: false };
+    return { courseId, isInstructor: false, instructorId };
 };
 
 // 1. Đặt câu hỏi mới
 exports.askQuestion = async (userId, lessonId, questionData) => {
-    const { courseId } = await checkAccessRight(userId, lessonId);
+    const { courseId, instructorId } = await checkAccessRight(userId, lessonId);
 
-    return await LessonQuestion.create({
+    // Tạo câu hỏi trong Database
+    const newQuestion = await LessonQuestion.create({
         lessonId,
         courseId,
         userId,
         title: questionData.title,
         content: questionData.content
     });
+
+    // ==========================================
+    // [MỚI] GỬI THÔNG BÁO CHO GIẢNG VIÊN
+    // ==========================================
+    // Kiểm tra: Chỉ thông báo nếu người đặt câu hỏi KHÔNG PHẢI là giảng viên của khóa đó
+    if (userId !== instructorId) {
+        try {
+            await notifService.pushNotification({
+                userId: instructorId,
+                title: 'Khóa học của bạn có câu hỏi mới',
+                message: `Một học viên vừa đặt câu hỏi: "${questionData.title}". Hãy vào giải đáp để hỗ trợ học viên nhé!`,
+                type: 'QnA',
+                actionUrl: `/courses/${courseId}/learn?question=${newQuestion.id}`,
+                isSendEmail: true // Bắn cả email "ting ting"
+            });
+        } catch (error) {
+            // Bao bọc try-catch để lỗi gửi mail không làm chết API tạo câu hỏi
+            console.error('Lỗi gửi thông báo khi có học viên đặt câu hỏi:', error);
+        }
+    }
+    // ==========================================
+
+    return newQuestion;
 };
 
 // 2. Lấy danh sách câu hỏi của 1 bài học (Kèm theo các câu trả lời)
