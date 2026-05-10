@@ -76,14 +76,16 @@ exports.answerQuestion = async (userId, questionId, content) => {
     const { isInstructor } = await checkAccessRight(userId, question.lessonId);
 
     // Gọi thông báo
-    await notifService.pushNotification({
-        userId: question.userId, // ID của học sinh đặt câu hỏi
-        title: isInstructor ? 'Giảng viên vừa trả lời cầu hỏi của bạn' : 'Vừa có một bạn học trả lời câu hỏi của bạn',
-        message: `Câu hỏi "${question.title}" vừa có phản hồi mới.`,
-        type: 'QnA',
-        actionUrl: `/courses/${question.courseId}/learn?question=${questionId}`,
-        isSendEmail: true // Bắn cả email báo cho học sinh quay lại học
-    });
+    if (userId !== question.userId) {
+        await notifService.pushNotification({
+            userId: question.userId, // ID của học sinh đặt câu hỏi
+            title: isInstructor ? 'Giảng viên vừa trả lời cầu hỏi của bạn' : 'Vừa có một bạn học trả lời câu hỏi của bạn',
+            message: `Câu hỏi "${question.title}" vừa có phản hồi mới.`,
+            type: 'QnA',
+            actionUrl: `/courses/${question.courseId}/learn?question=${questionId}`,
+            isSendEmail: true // Bắn cả email báo cho học sinh quay lại học
+        });
+    }
 
     return await LessonAnswer.create({
         questionId,
