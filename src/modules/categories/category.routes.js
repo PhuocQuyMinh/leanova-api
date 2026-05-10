@@ -16,4 +16,7 @@ router.use(authMiddleware.restrictTo('Admin'));
 // Quản lý danh mục
 router.post('/', categoryController.createCategory);
 
+// [MỚI] quản lý danh mục
+router.delete('/:id', categoryController.deleteCategory);
+router.patch('/:id', categoryController.updateCategory);
 module.exports = router;
