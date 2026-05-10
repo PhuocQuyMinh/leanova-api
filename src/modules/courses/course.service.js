@@ -6,6 +6,9 @@ const Lesson = require('./lesson.model');
 const Attachment = require('./attachment.model');
 const Quiz = require('./quiz.model');
 const QuizQuestion = require('./quiz_question.model');
+const User = require('../users/user.model');
+const notifService = require('../notifications/notification.service');
+const { Op } = require('sequelize');
 
 
 const cloudinary = require('cloudinary').v2;
@@ -57,6 +60,46 @@ exports.createCourse = async (courseData, instructorId) => {
         categoryId: courseData.categoryId,
         instructorId: instructorId // Lấy ID của người đang đăng nhập gắn vào khóa học
     });
+
+    // ==========================================
+    // GỬI THÔNG BÁO CHO MODERATOR/ADMIN
+    // ==========================================
+    try {
+        // Lấy tên giảng viên để cá nhân hóa thông báo
+        const instructor = await User.findByPk(instructorId, { attributes: ['fullName'] });
+        const instructorName = instructor ? instructor.fullName : 'Một giảng viên';
+
+        // Tìm tất cả các tài khoản có quyền duyệt bài (Mod hoặc Admin)
+        const moderators = await User.findAll({
+            where: {
+                role: {
+                    [Op.in]: ['Moderator']
+                }
+            },
+            attributes: ['id'] // Chỉ lấy ID cho nhẹ server
+        });
+
+        if (moderators.length > 0) {
+            // Tạo một mảng chứa các "lệnh" gửi thông báo
+            const notificationPromises = moderators.map(mod =>
+                notifService.pushNotification({
+                    userId: mod.id,
+                    title: 'Khóa học mới đang chờ kiểm duyệt',
+                    message: `Giảng viên ${instructorName} vừa tạo khóa học "${newCourse.title}". Vui lòng kiểm tra và phê duyệt.`,
+                    type: 'System', // Loại thông báo hệ thống
+                    actionUrl: `/admin/courses/${newCourse.id}/review`, // Dẫn thẳng Mod vào trang xem trước khóa học
+                    isSendEmail: true
+                })
+            );
+
+            // Chạy gửi thông báo đồng loạt (Song song) để tăng tốc độ phản hồi API
+            await Promise.all(notificationPromises);
+        }
+    } catch (notifError) {
+        // Cô lập lỗi: Có lỗi gửi mail thì khóa học vẫn được tạo thành công
+        console.error('Lỗi khi gửi thông báo có khóa học mới cho Mod:', notifError);
+    }
+    // ==========================================
 
     return newCourse;
 };
