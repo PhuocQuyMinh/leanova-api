@@ -48,6 +48,29 @@ const User = sequelize.define('User', {
     lockReason: {
         type: DataTypes.TEXT,
         allowNull: true
+    },
+    // [MỚI] Hỗ trợ Đăng nhập Google
+    authProvider: {
+        type: DataTypes.ENUM('Local', 'Google'),
+        defaultValue: 'Local'
+    },
+    avatarUrl: {
+        type: DataTypes.STRING,
+        allowNull: true // Lưu link ảnh đại diện từ Google
+    },
+
+    // [MỚI] Hỗ trợ Xác thực Email
+    isEmailVerified: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false // Đăng ký xong là false, click link trong mail mới thành true
+    },
+    emailVerificationToken: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    emailVerificationExpires: {
+        type: DataTypes.DATE,
+        allowNull: true
     }
 }, {
     tableName: 'users',
