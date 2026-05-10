@@ -41,6 +41,6 @@ router.get('/my-favorites', storeController.getMyFavorites);
 // Route Mới: Private (Chỉ học viên đã đăng nhập)
 router.get('/my-courses', storeController.searchMyCourses);
 
-router.get('/courses/:courseId', learningController.getLearningSpace);
+router.get('/courses/:courseId', storeController.getLearningSpace);
 
 module.exports = router;

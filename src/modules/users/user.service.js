@@ -1,5 +1,6 @@
 const User = require('./user.model');
 const AppError = require('../../core/utils/appError');
+const notifService = require('../notifications/notification.service'); // [MỚI] Thêm dòng này
 
 // 1. Khóa tài khoản
 exports.lockAccount = async (targetUserId, lockReason) => {
@@ -18,6 +19,24 @@ exports.lockAccount = async (targetUserId, lockReason) => {
     user.isActive = false;
     user.lockReason = lockReason;
     await user.save();
+
+    // ==========================================
+    // [MỚI] GỬI EMAIL THÔNG BÁO KHÓA TÀI KHOẢN
+    // ==========================================
+    try {
+        await notifService.pushNotification({
+            userId: user.id,
+            title: 'THÔNG BÁO QUAN TRỌNG: Tài khoản của bạn đã bị khóa',
+            message: `Tài khoản của bạn trên hệ thống Leanova đã bị tạm khóa bởi Ban Quản Trị. Lý do: "${lockReason}". Nếu bạn cho rằng đây là một sự nhầm lẫn, vui lòng liên hệ bộ phận hỗ trợ qua email support@leanova.com để được giải quyết.`,
+            type: 'System', // Loại thông báo hệ thống
+            actionUrl: '/contact-support', // Link dẫn ra trang liên hệ (vì user không còn đăng nhập được)
+            isSendEmail: true // BẮT BUỘC gửi email vì user đã bị khóa, không thể vào app đọc quả chuông
+        });
+    } catch (notifError) {
+        // Cô lập lỗi: Nếu SMTP hỏng thì tài khoản vẫn bị khóa thành công trong DB
+        console.error('Lỗi khi gửi email thông báo khóa tài khoản cho user:', notifError);
+    }
+    // ==========================================
 
     return user;
 };
