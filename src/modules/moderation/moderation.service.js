@@ -200,21 +200,30 @@ exports.reviewInstructorRequest = async (requestId, action, rejectReason = '') =
         // ==========================================
         // GỬI THÔNG BÁO (SAU KHI COMMIT THÀNH CÔNG)
         // ==========================================
-        if (action === 'Approve') {
-            // Bọc trong try-catch riêng để "luồng này có chết cũng không ảnh hưởng" đến kết quả duyệt
-            try {
+        try {
+            if (action === 'Approve') {
                 await notifService.pushNotification({
                     userId: request.userId,
                     title: 'Chúc mừng! Bạn đã trở thành giảng viên tại Leanova',
                     message: 'Hồ sơ của bạn đã được phê duyệt. Bây giờ bạn có thể bắt đầu tạo khóa học và chia sẻ kiến thức của mình.',
                     type: 'Account',
-                    actionUrl: '/instructor/dashboard', // Link dẫn về trang quản lý của giảng viên
+                    actionUrl: '/instructor/dashboard',
                     isSendEmail: true
                 });
-            } catch (notifError) {
-                // Chỉ log lỗi để dev theo dõi, không ném lỗi ra ngoài làm hỏng luồng chính
-                console.error('Lỗi gửi thông báo chúc mừng giảng viên:', notifError);
+            } else if (action === 'Reject') {
+                await notifService.pushNotification({
+                    userId: request.userId,
+                    title: 'Cập nhật về Đơn đăng ký Giảng viên của bạn',
+                    // Nhúng trực tiếp lý do từ chối vào tin nhắn để học viên biết đường sửa
+                    message: `Rất tiếc, đơn đăng ký trở thành giảng viên của bạn chưa được phê duyệt lúc này. Lý do từ ban kiểm duyệt: "${rejectReason}". Bạn có thể cập nhật lại hồ sơ và nộp lại nhé!`,
+                    type: 'Account',
+                    actionUrl: '/apply-instructor', // Dẫn họ quay lại trang điền form
+                    isSendEmail: true
+                });
             }
+        } catch (notifError) {
+            // Lỗi gửi mail không được làm sập luồng duyệt đơn
+            console.error(`Lỗi gửi thông báo khi xử lý đơn (Action: ${action}):`, notifError);
         }
 
         return request;
