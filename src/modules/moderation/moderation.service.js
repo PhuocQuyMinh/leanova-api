@@ -10,6 +10,7 @@ const Quiz = require('../courses/quiz.model');
 const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
 const notifService = require('../notifications/notification.service');
+const { Op } = require('sequelize'); // [MỚI] Thêm dòng này vào đầu file
 
 // Cấu hình Cloudinary (Đảm bảo bạn đã có các biến này trong file .env)
 cloudinary.config({
@@ -160,14 +161,55 @@ exports.createInstructorRequest = async (userId, requestData, file) => {
         throw new AppError('Lỗi khi đẩy file chứng chỉ lên Cloudinary', 500);
     }
 
-    // 4. Lưu vào Database
-    return await InstructorRequest.create({
+    // 4. Lưu vào Database (Gắn vào một biến thay vì return luôn)
+    const newRequest = await InstructorRequest.create({
         userId,
         bio: requestData.bio,
         experience: requestData.experience,
         portfolioUrl: requestData.portfolioUrl,
         certificateUrl: certificateUrl
     });
+
+    // ==========================================
+    // [MỚI] GỬI THÔNG BÁO CHO MODERATOR/ADMIN
+    // ==========================================
+    try {
+        // Lấy tên người nộp đơn để thông báo trực quan hơn
+        const applicant = await User.findByPk(userId, { attributes: ['fullName'] });
+        const applicantName = applicant ? applicant.fullName : 'Một học viên';
+
+        // Lấy danh sách Mod và Admin
+        const moderators = await User.findAll({
+            where: {
+                role: {
+                    [Op.in]: ['Moderator']
+                }
+            },
+            attributes: ['id']
+        });
+
+        if (moderators.length > 0) {
+            const notificationPromises = moderators.map(mod =>
+                notifService.pushNotification({
+                    userId: mod.id,
+                    title: 'Có đơn đăng ký Giảng viên mới',
+                    message: `Học viên ${applicantName} vừa nộp đơn đăng ký trở thành giảng viên. Vui lòng kiểm tra và xét duyệt.`,
+                    type: 'System',
+                    actionUrl: `/admin/instructor-requests/${newRequest.id}`, // Dẫn Mod vào trang xem chi tiết đơn
+                    isSendEmail: true
+                })
+            );
+
+            // Bắn thông báo đồng loạt
+            await Promise.all(notificationPromises);
+        }
+    } catch (notifError) {
+        // Cô lập lỗi
+        console.error('Lỗi khi gửi thông báo có đơn đăng ký giảng viên mới cho Mod:', notifError);
+    }
+    // ==========================================
+
+    return newRequest;
 };
 
 exports.getInstructorRequestDetail = async (requestId) => {
