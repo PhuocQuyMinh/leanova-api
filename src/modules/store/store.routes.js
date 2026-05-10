@@ -1,7 +1,7 @@
 const express = require('express');
 const storeController = require('./store.controller');
 const authMiddleware = require('../../core/middlewares/auth.middleware');
-
+const searchController = require('./search.controller');
 const router = express.Router();
 
 // ==========================================
@@ -9,7 +9,7 @@ const router = express.Router();
 // ==========================================
 router.get('/courses', storeController.getPublishedCourses);
 router.get('/courses/:id', storeController.getCourseDetailPublic);
-
+router.get('/search/courses', searchController.search);
 router.get('/vnpay_return', storeController.vnpayReturn);
 
 // ==========================================

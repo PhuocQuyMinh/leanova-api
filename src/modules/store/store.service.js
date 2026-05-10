@@ -87,6 +87,20 @@ exports.addToCart = async (userId, courseId) => {
     return await CartItem.create({ userId, courseId });
 };
 
+// [MỚI] 3.1. Giỏ hàng: Xóa một khóa học khỏi giỏ
+exports.removeFromCart = async (userId, courseId) => {
+    // 1. Tìm CartItem dựa trên userId và courseId
+    const cartItem = await CartItem.findOne({ where: { userId, courseId } });
+
+    // 2. Báo lỗi nếu không tìm thấy (user cố tình truyền sai ID hoặc đã xóa rồi)
+    if (!cartItem) throw new AppError('Khóa học này không tồn tại trong giỏ hàng của bạn!', 404);
+
+    // 3. Thực hiện xóa khỏi DB
+    await cartItem.destroy();
+
+    return { message: 'Đã xóa khóa học khỏi giỏ hàng.' };
+};
+
 // 4. Giỏ hàng: Xem giỏ hàng
 exports.getMyCart = async (userId) => {
     return await CartItem.findAll({
