@@ -112,3 +112,33 @@ exports.updateCategory = async (categoryId, updateData) => {
 
     return category;
 };
+
+exports.moveCourseCategory = async (courseId, newCategoryId) => {
+    // 1. Kiểm tra khóa học có tồn tại không
+    const course = await Course.findByPk(courseId);
+    if (!course) {
+        throw new AppError('Không tìm thấy khóa học này!', 404);
+    }
+
+    // 2. Kiểm tra danh mục mới có tồn tại không
+    const newCategory = await Category.findByPk(newCategoryId);
+    if (!newCategory) {
+        throw new AppError('Danh mục đích không tồn tại!', 404);
+    }
+
+    // 3. RÀNG BUỘC QUAN TRỌNG: Danh mục mới BẮT BUỘC phải là cấp 2
+    if (newCategory.parentId === null) {
+        throw new AppError('Lỗi cấu trúc: Bạn chỉ có thể chuyển khóa học sang danh mục con chi tiết (Cấp 2), không được chuyển vào danh mục gốc!', 400);
+    }
+
+    // 4. Tránh trường hợp chuyển nhầm vào chính danh mục cũ
+    if (course.categoryId === newCategoryId) {
+        throw new AppError('Khóa học này đã nằm trong danh mục đích rồi!', 400);
+    }
+
+    // 5. Thực hiện chuyển đổi
+    course.categoryId = newCategoryId;
+    await course.save();
+
+    return course;
+};

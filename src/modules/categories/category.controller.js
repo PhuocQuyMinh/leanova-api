@@ -48,3 +48,23 @@ exports.updateCategory = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+// [MỚI] Chuyển danh mục khóa học
+exports.moveCourseCategory = catchAsync(async (req, res, next) => {
+    const { id } = req.params; // Lấy ID khóa học từ URL
+    const { newCategoryId } = req.body; // Lấy ID danh mục mới từ Body
+
+    if (!newCategoryId) {
+        return next(new AppError('Vui lòng cung cấp ID của danh mục đích (newCategoryId)!', 400));
+    }
+
+    const updatedCourse = await categoryService.moveCourseCategory(id, newCategoryId);
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Đã chuyển đổi danh mục khóa học thành công!',
+        data: {
+            course: updatedCourse
+        }
+    });
+});
