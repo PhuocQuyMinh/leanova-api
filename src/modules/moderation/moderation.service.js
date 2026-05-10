@@ -7,6 +7,15 @@ const sequelize = require('../../core/database/init.mysql');
 const AppError = require('../../core/utils/appError');
 const Attachment = require('../courses/attachment.model');
 const Quiz = require('../courses/quiz.model');
+const cloudinary = require('cloudinary').v2;
+const fs = require('fs');
+
+// Cấu hình Cloudinary (Đảm bảo bạn đã có các biến này trong file .env)
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 // ==========================================
 // LUỒNG 1: DUYỆT KHÓA HỌC
@@ -92,17 +101,56 @@ exports.getCourseDetailForMod = async (courseId) => {
 // LUỒNG 2: DUYỆT GIẢNG VIÊN (SỬ DỤNG TRANSACTION)
 // ==========================================
 
-// 2.1 Học viên nộp đơn đăng ký
-exports.createInstructorRequest = async (userId, requestData) => {
-    // Kiểm tra xem có đơn nào đang Pending không, tránh spam
+// 2.1 Học viên nộp đơn đăng ký (ĐÃ CẬP NHẬT LUỒNG UPLOAD)
+exports.createInstructorRequest = async (userId, requestData, file) => {
+    // 1. Kiểm tra xem có đơn nào đang Pending không
     const existingRequest = await InstructorRequest.findOne({ where: { userId, status: 'Pending' } });
     if (existingRequest) throw new AppError('Bạn đang có một đơn chờ duyệt rồi!', 400);
 
+    // 2. Kiểm tra file đính kèm
+    if (!file) throw new AppError('Vui lòng đính kèm file chứng chỉ hoặc CV!', 400);
+
+    let certificateUrl = '';
+
+    // 3. Xử lý Upload an toàn 2 bước giống addAttachment
+    try {
+        const result = await cloudinary.uploader.upload(file.path, {
+            folder: 'leanova_moderation/certificates',
+            resource_type: 'auto' // Quan trọng: Để 'auto' thì Cloudinary mới nhận được file PDF
+        });
+
+        certificateUrl = result.secure_url;
+
+        // Dọn rác: Xóa file tạm
+        fs.unlinkSync(file.path);
+    } catch (error) {
+        // Có lỗi xảy ra cũng phải xóa file tạm để không đầy ổ cứng server
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        throw new AppError('Lỗi khi đẩy file chứng chỉ lên Cloudinary', 500);
+    }
+
+    // 4. Lưu vào Database
     return await InstructorRequest.create({
         userId,
         bio: requestData.bio,
-        experience: requestData.experience
+        experience: requestData.experience,
+        portfolioUrl: requestData.portfolioUrl,
+        certificateUrl: certificateUrl
     });
+};
+
+exports.getInstructorRequestDetail = async (requestId) => {
+    const request = await InstructorRequest.findByPk(requestId, {
+        include: [{
+            model: User,
+            as: 'applicant',
+            attributes: ['id', 'fullName', 'email', 'avatarUrl']
+        }]
+    });
+
+    if (!request) throw new AppError('Không tìm thấy đơn đăng ký này!', 404);
+
+    return request;
 };
 
 // 2.2 Mod lấy danh sách đơn chờ duyệt

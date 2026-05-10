@@ -1,5 +1,7 @@
 const moderationService = require('./moderation.service');
 const catchAsync = require('../../core/utils/catchAsync');
+const AppError = require('../../core/utils/appError');
+
 
 // --- HỌC VIÊN ---
 exports.applyForInstructor = catchAsync(async (req, res, next) => {
@@ -36,5 +38,31 @@ exports.getCourseDetail = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         data: { course }
+    });
+});
+
+// 1. Nộp đơn
+exports.submitRequest = catchAsync(async (req, res, next) => {
+    // Truyền thẳng req.file xuống cho Service xử lý
+    const newRequest = await moderationService.createInstructorRequest(
+        req.user.id,
+        req.body,
+        req.file
+    );
+
+    res.status(201).json({
+        status: 'success',
+        message: 'Đơn đăng ký đã được gửi thành công và đang chờ duyệt!',
+        data: { request: newRequest }
+    });
+});
+
+// 2. [MỚI] Mod lấy chi tiết đơn
+exports.getRequestDetail = catchAsync(async (req, res, next) => {
+    const request = await moderationService.getInstructorRequestDetail(req.params.id);
+
+    res.status(200).json({
+        status: 'success',
+        data: { request }
     });
 });

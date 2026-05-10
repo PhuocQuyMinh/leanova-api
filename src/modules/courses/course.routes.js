@@ -21,7 +21,7 @@ router.use(authMiddleware.restrictTo('Instructor', 'Admin')); // Chỉ Giảng v
 // Quản lý khóa học
 router.post('/', courseController.createCourse);
 router.get('/my-courses', courseController.getMyCourses);
-router.put('/:id', upload.single('coverImage'), courseController.updateCourse);
+router.put('/:id', upload.uploadAttachment.single('coverImage'), courseController.updateCourse);
 
 // Biên tập nội dung
 // Chương
@@ -30,12 +30,12 @@ router.put('/sections/:sectionId', courseController.updateSection);
 router.post('/sections/:sectionId/quizzes', courseController.addQuiz);
 
 // Lesson
-router.post('/sections/:sectionId/lessons', upload.single('video'), courseController.addLesson);
-router.put('/lessons/:lessonId', upload.single('video'), courseController.updateLesson);
+router.post('/sections/:sectionId/lessons', upload.uploadVideo.single('video'), courseController.addLesson);
+router.put('/lessons/:lessonId', upload.uploadVideo.single('video'), courseController.updateLesson);
 
 // Attachment
-router.post('/lessons/:lessonId/attachments', upload.single('file'), courseController.addAttachment);
-router.put('/attachments/:attachmentId', upload.single('file'), courseController.updateAttachment);
+router.post('/lessons/:lessonId/attachments', upload.uploadAttachment.single('file'), courseController.addAttachment);
+router.put('/attachments/:attachmentId', upload.uploadAttachment.single('file'), courseController.updateAttachment);
 
 // Lưu lại vị trí khi kéo thả (Kéo thả áp dụng cho toàn bộ khóa học)
 router.patch('/:courseId/curriculum/reorder', courseController.reorderCurriculum);

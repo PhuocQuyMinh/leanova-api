@@ -8,7 +8,17 @@ const InstructorRequest = sequelize.define('InstructorRequest', {
     // Kinh nghiệm giảng dạy / Link Profile (LinkedIn, Portfolio)
     bio: { type: DataTypes.TEXT, allowNull: false },
     experience: { type: DataTypes.STRING, allowNull: true },
+    // [MỚI] Link LinkedIn hoặc Portfolio (Dạng Text)
+    portfolioUrl: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
 
+    // [MỚI] Đường dẫn lưu file chứng chỉ / CV / Bằng cấp
+    certificateUrl: {
+        type: DataTypes.STRING,
+        allowNull: false // Bắt buộc phải có bằng chứng
+    },
     status: {
         type: DataTypes.ENUM('Pending', 'Approved', 'Rejected'),
         defaultValue: 'Pending'
