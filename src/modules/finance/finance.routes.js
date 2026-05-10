@@ -51,4 +51,15 @@ router.get(
     financeController.getTopInstructors
 );
 
+
+// API lấy thống kê tuần (Dùng cho cả Admin Dashboard và Instructor Dashboard)
+
+// có thể xử lý thêm ở Frontend bằng cách điền giá trị 0 cho các tuần còn thiếu dựa trên weekLabel.
+router.get(
+    '/stats/weekly-revenue',
+    authMiddleware.protect,
+    authMiddleware.restrictTo('Admin', 'Instructor'),
+    financeController.getWeeklyStats
+);
+
 module.exports = router;

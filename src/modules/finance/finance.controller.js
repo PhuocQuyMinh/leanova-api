@@ -131,3 +131,19 @@ exports.getTopInstructors = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+exports.getWeeklyStats = catchAsync(async (req, res, next) => {
+    // Nếu là Admin thì instructorId = null để lấy toàn sàn
+    // Nếu là Instructor thì lấy ID từ token
+    const instructorId = req.user.role === 'Admin' ? null : req.user.id;
+
+    const data = await financeService.getWeeklyRevenueStats(instructorId);
+
+    res.status(200).json({
+        status: 'success',
+        data: {
+            period: '4 tuần gần nhất',
+            stats: data
+        }
+    });
+});

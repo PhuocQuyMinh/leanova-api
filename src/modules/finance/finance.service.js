@@ -8,6 +8,7 @@ const InstructorSetting = require('./instructor_setting.model');
 const SystemSetting = require('./system_setting.model');
 const notifService = require('../notifications/notification.service'); // [MỚI] Thêm dòng này
 const User = require('../users/user.model');
+const moment = require('moment');
 
 // 1. Lấy thông số Tổng quan (Doanh thu & Số dư)
 exports.getDashboardStats = async (instructorId) => {
@@ -372,5 +373,50 @@ exports.getTopInstructors = async () => {
         group: ['instructorId'], // Nhóm theo từng giảng viên
         order: [[sequelize.literal('totalSales'), 'DESC']], // Sắp xếp doanh thu giảm dần
         limit: 3 // Chỉ lấy 3 người đầu bảng
+    });
+};
+
+// finance.service.js
+
+exports.getWeeklyRevenueStats = async (instructorId = null) => {
+    // 1. Xác định mốc thời gian: 4 tuần trước kể từ đầu tuần hiện tại
+    const fourWeeksAgo = moment().subtract(4, 'weeks').startOf('isoWeek').toDate();
+
+    const whereClause = instructorId ? { instructorId } : {};
+
+    // Nếu là Admin (instructorId = null) -> Tính tổng giá bán (GMV)
+    // Nếu là Instructor -> Tính tiền thực nhận (instructorEarnings)
+    const sumColumn = instructorId ? 'instructorEarnings' : 'priceAtPurchase';
+
+    const stats = await OrderItem.findAll({
+        where: whereClause,
+        include: [{
+            model: Order,
+            where: {
+                status: 'Success',
+                createdAt: { [Op.gte]: fourWeeksAgo }
+            },
+            attributes: []
+        }],
+        attributes: [
+            // Nhóm theo Năm + Tuần (mode 1: Tuần bắt đầu từ Thứ 2)
+            [sequelize.fn('YEARWEEK', sequelize.col('OrderItem.createdAt'), 1), 'weekIdentifier'],
+            [sequelize.fn('SUM', sequelize.col(sumColumn)), 'revenue'],
+            [sequelize.fn('COUNT', sequelize.col('OrderItem.id')), 'orderCount']
+        ],
+        group: [sequelize.fn('YEARWEEK', sequelize.col('OrderItem.createdAt'), 1)],
+        order: [[sequelize.literal('weekIdentifier'), 'ASC']],
+        raw: true
+    });
+
+    // 2. Format lại dữ liệu để Frontend dễ hiển thị (Thêm nhãn tuần)
+    return stats.map(item => {
+        const year = item.weekIdentifier.toString().substring(0, 4);
+        const week = item.weekIdentifier.toString().substring(4);
+        return {
+            ...item,
+            weekLabel: `Tuần ${week} - ${year}`,
+            revenue: parseInt(item.revenue) || 0
+        };
     });
 };
