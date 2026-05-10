@@ -8,6 +8,7 @@ const Review = require('../courses/review.model');
 const LessonProgress = require('../store/lesson_progress.model');
 const AppError = require('../../core/utils/appError');
 const User = require('../users/user.model');
+const notifService = require('../notifications/notification.service'); // Bổ sung dòng này
 
 // ==========================================
 // 1. THỐNG KÊ TỔNG QUAN (TẤT CẢ KHÓA HỌC)
@@ -284,6 +285,46 @@ exports.reportReview = async (instructorId, reviewId, reason) => {
     review.isReported = true;
     review.reportReason = reason;
     await review.save();
+
+    // ==========================================
+    // [MỚI] GỬI THÔNG BÁO CHO MODERATOR/ADMIN
+    // ==========================================
+    try {
+        // Lấy thông tin giảng viên để hiển thị tên
+        const instructor = await User.findByPk(instructorId, { attributes: ['fullName'] });
+        const instructorName = instructor ? instructor.fullName : 'Một giảng viên';
+
+        // Lấy danh sách tài khoản Mod và Admin
+        const moderators = await User.findAll({
+            where: {
+                role: {
+                    [Op.in]: ['Moderator']
+                }
+            },
+            attributes: ['id']
+        });
+
+        if (moderators.length > 0) {
+            const notificationPromises = moderators.map(mod =>
+                notifService.pushNotification({
+                    userId: mod.id,
+                    title: 'Có báo cáo vi phạm mới',
+                    message: `Giảng viên ${instructorName} vừa báo cáo một đánh giá vi phạm trong khóa học "${review.Course.title}". Lý do: "${reason}". Vui lòng kiểm tra.`,
+                    type: 'System',
+                    actionUrl: `/admin/reported-reviews`, // Dẫn Mod vào thẳng trang danh sách báo cáo
+                    isSendEmail: true
+                })
+            );
+
+            // Gửi đồng loạt tất cả thông báo
+            await Promise.all(notificationPromises);
+        }
+    } catch (notifError) {
+        // Lỗi gửi mail không được làm sập tính năng báo cáo của giảng viên
+        console.error('Lỗi gửi thông báo cho Mod khi có review bị báo cáo:', notifError);
+    }
+    // ==========================================
+
     return review;
 };
 
