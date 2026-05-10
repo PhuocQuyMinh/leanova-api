@@ -52,6 +52,36 @@ exports.reviewCourse = async (courseId, action, rejectMessage = '') => {
     }
 
     await course.save();
+
+    // ==========================================
+    // [MỚI] GỬI THÔNG BÁO CHO GIẢNG VIÊN
+    // ==========================================
+    try {
+        if (action === 'Approve') {
+            await notifService.pushNotification({
+                userId: course.instructorId, // Gửi cho chủ sở hữu khóa học
+                title: 'Khóa học của bạn đã được xuất bản!',
+                message: `Chúc mừng! Khóa học "${course.title}" của bạn đã được ban kiểm duyệt phê duyệt và hiện đã có mặt trên cửa hàng.`,
+                type: 'Course',
+                actionUrl: `/courses/${course.id}`, // Link dẫn ra trang khóa học public
+                isSendEmail: true
+            });
+        } else if (action === 'Reject') {
+            await notifService.pushNotification({
+                userId: course.instructorId,
+                title: 'Khóa học của bạn cần được chỉnh sửa thêm',
+                message: `Khóa học "${course.title}" của bạn tạm thời chưa được phê duyệt. Lý do: "${rejectMessage}". Vui lòng cập nhật lại nội dung và gửi duyệt lại nhé!`,
+                type: 'Course',
+                actionUrl: `/instructor/courses/${course.id}/edit`, // Dẫn về trang chỉnh sửa khóa học của giảng viên
+                isSendEmail: true
+            });
+        }
+    } catch (notifError) {
+        // Lỗi gửi mail không được làm sập luồng duyệt khóa học
+        console.error(`Lỗi gửi thông báo khi duyệt khóa học (Action: ${action}):`, notifError);
+    }
+    // ==========================================
+
     return course;
 };
 
