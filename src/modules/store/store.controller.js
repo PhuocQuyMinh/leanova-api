@@ -103,3 +103,14 @@ exports.searchMyCourses = catchAsync(async (req, res, next) => {
         data: result
     });
 });
+
+exports.getLearningSpace = catchAsync(async (req, res, next) => {
+    // req.user.id lấy từ Middleware bảo vệ (protect)
+    // req.params.courseId lấy từ URL
+    const courseDetail = await storeService.getLearningSpaceCourseDetail(req.user.id, req.params.courseId);
+
+    res.status(200).json({
+        status: 'success',
+        data: courseDetail
+    });
+});

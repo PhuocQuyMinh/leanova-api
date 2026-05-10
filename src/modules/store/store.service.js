@@ -586,3 +586,90 @@ exports.getMyFavorites = async (userId) => {
         order: [['createdAt', 'DESC']]
     });
 };
+
+// API Không gian học tập: Lấy chi tiết khóa học & Tiến độ (Auto-focus)
+exports.getLearningSpaceCourseDetail = async (userId, courseId) => {
+    // 1. Kiểm tra quyền truy cập (Học viên đã mua khóa học chưa?)
+    const enrollment = await Enrollment.findOne({ where: { userId, courseId } });
+    if (!enrollment) throw new AppError('Bạn chưa sở hữu khóa học này! Vui lòng mua để truy cập.', 403);
+
+    // 2. Kéo toàn bộ cấu trúc khóa học (Giống getCourseDetailForMod)
+    const course = await Course.findByPk(courseId, {
+        include: [
+            { model: User, as: 'instructor', attributes: ['id', 'fullName', 'avatarUrl'] },
+            {
+                model: Section, as: 'sections',
+                include: [{
+                    model: Lesson, as: 'lessons',
+                    include: [
+                        { model: Attachment, as: 'attachments' },
+                        { model: Quiz, as: 'quizzes' }
+                    ]
+                }]
+            }
+        ],
+        order: [
+            [{ model: Section, as: 'sections' }, 'orderIndex', 'ASC'],
+            [{ model: Section, as: 'sections' }, { model: Lesson, as: 'lessons' }, 'orderIndex', 'ASC']
+        ]
+    });
+
+    if (!course) throw new AppError('Không tìm thấy khóa học này!', 404);
+
+    // 3. Gom ID của tất cả các bài học lại để truy vấn tiến độ một lần cho nhẹ DB
+    const lessonIds = [];
+    course.sections.forEach(section => {
+        section.lessons.forEach(lesson => {
+            lessonIds.push(lesson.id);
+        });
+    });
+
+    // 4. Lấy lịch sử học tập của user đối với các bài học trên
+    const progressRecords = await LessonProgress.findAll({
+        where: {
+            userId: userId,
+            lessonId: { [Op.in]: lessonIds }
+        }
+    });
+
+    // Tạo một Map (Key-Value) để tra cứu trạng thái hoàn thành cực nhanh
+    // VD: { 101: true, 102: true, 103: false }
+    const progressMap = {};
+    progressRecords.forEach(record => {
+        progressMap[record.lessonId] = record.isCompleted;
+    });
+
+    // 5. THUẬT TOÁN TÌM BÀI HỌC DỞ DANG (AUTO-FOCUS)
+    // Chuyển kết quả Sequelize thành JSON thuần để dễ chèn thêm dữ liệu
+    const courseData = course.toJSON();
+
+    let focusLessonId = null; // ID bài học cần focus
+    let isFocusFound = false; // Cờ đánh dấu đã tìm thấy chưa
+
+    courseData.sections.forEach(section => {
+        section.lessons.forEach(lesson => {
+            // Tra cứu xem bài này học xong chưa (nếu chưa có record thì mặc định là false)
+            const isCompleted = progressMap[lesson.id] || false;
+
+            // Chèn thẳng trạng thái hoàn thành vào từng bài học để Frontend dễ vẽ nút tích xanh (Checkmark)
+            lesson.isCompleted = isCompleted;
+
+            // Nếu đây là bài ĐẦU TIÊN chưa hoàn thành -> Đặt làm Focus Lesson
+            if (!isCompleted && !isFocusFound) {
+                focusLessonId = lesson.id;
+                isFocusFound = true;
+            }
+        });
+    });
+
+    // Fallback: Nếu học viên đã học xong 100% khóa học, focus lại vào bài học đầu tiên (hoặc để null tùy bạn)
+    if (!focusLessonId && lessonIds.length > 0) {
+        focusLessonId = lessonIds[0];
+    }
+
+    // Đính kèm các tham số tổng quan ra ngoài cùng
+    courseData.focusLessonId = focusLessonId;
+    courseData.overallProgressPercent = enrollment.progressPercent; // % hoàn thành tổng thể
+
+    return courseData;
+};
