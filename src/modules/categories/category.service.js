@@ -1,6 +1,7 @@
 const AppError = require('../../core/utils/appError');
 const Category = require('./category.model');
 const Course = require('../courses/course.model'); // [MỚI] Import model khóa học
+const { Op } = require('sequelize');
 
 // 1. Logic lấy cây danh mục 2 cấp
 exports.getCategoryTree = async () => {
@@ -29,6 +30,11 @@ exports.getCategoryTree = async () => {
 
 // 2. Logic tạo danh mục mới
 exports.createCategory = async (categoryData) => { //[cite: 1]
+    const existingCategory = await Category.findOne({ where: { name: categoryData.name } });
+    if (existingCategory) {
+        throw new AppError('Tên danh mục này đã tồn tại trên hệ thống!', 400);
+    }
+
     // Nếu người dùng muốn tạo danh mục con (có truyền parentId)
     if (categoryData.parentId) {
         const parentCategory = await Category.findByPk(categoryData.parentId);
@@ -100,6 +106,17 @@ exports.updateCategory = async (categoryId, updateData) => {
     // 2. Kiểm tra dữ liệu đầu vào
     if (!updateData.name || updateData.name.trim() === '') {
         throw new AppError('Tên danh mục không được để trống!', 400);
+    }
+
+    const duplicateName = await Category.findOne({
+        where: {
+            name: updateData.name,
+            id: { [Op.ne]: categoryId } // "id != categoryId"
+        }
+    });
+
+    if (duplicateName) {
+        throw new AppError('Tên danh mục này đã được sử dụng bởi một danh mục khác!', 400);
     }
 
     // 3. Tiến hành cập nhật
