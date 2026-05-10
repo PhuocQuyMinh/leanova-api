@@ -108,3 +108,14 @@ exports.getGlobalCommission = catchAsync(async (req, res, next) => {
         }
     });
 });
+
+// [MỚI] Lấy thống kê tài chính hệ thống
+exports.getPlatformStats = catchAsync(async (req, res, next) => {
+    // req.query có thể chứa startDate và endDate từ Frontend gửi lên
+    const stats = await financeService.getPlatformStats(req.query);
+
+    res.status(200).json({
+        status: 'success',
+        data: stats
+    });
+});

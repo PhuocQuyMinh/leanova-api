@@ -299,3 +299,52 @@ exports.getGlobalCommission = async () => {
 
     return defaultRate;
 };
+
+// [MỚI] Thống kê tài chính toàn nền tảng (Cho Admin)
+exports.getPlatformStats = async (queryData) => {
+    const { startDate, endDate } = queryData;
+
+    // Điều kiện lọc: Chỉ tính các đơn hàng đã thanh toán thành công
+    const orderWhereClause = { status: 'Success' };
+
+    // Nếu Admin muốn lọc theo khoảng thời gian
+    if (startDate && endDate) {
+        orderWhereClause.createdAt = {
+            [Op.between]: [new Date(startDate), new Date(endDate)]
+        };
+    }
+
+    // 1. TỔNG GIÁ TRỊ GIAO DỊCH (GMV)
+    // Tính tổng cột 'amount' trong bảng Order
+    const totalTransactionValue = await Order.sum('amount', {
+        where: orderWhereClause
+    }) || 0;
+
+    // 2. LỢI NHUẬN THỰC TẾ CỦA HỆ THỐNG
+    // Lợi nhuận = Tổng của (Giá bán khóa học - Tiền chia cho giảng viên)
+    // Ta dùng sequelize.literal để trừ trực tiếp 2 cột trong DB cho tốc độ nhanh nhất
+    const profitResult = await OrderItem.findAll({
+        include: [{
+            model: Order,
+            attributes: [], // Không cần lấy data của Order, chỉ dùng để JOIN và WHERE
+            where: orderWhereClause
+        }],
+        attributes: [
+            [
+                sequelize.fn('SUM', sequelize.literal('priceAtPurchase - instructorEarnings')),
+                'platformProfit'
+            ]
+        ],
+        raw: true
+    });
+
+    const platformProfit = profitResult[0].platformProfit ? parseInt(profitResult[0].platformProfit) : 0;
+
+    return {
+        totalTransactionValue,
+        platformProfit,
+        // Tiện tay tính luôn tiền giảng viên nhận được để Admin nhìn tổng quan
+        totalInstructorEarnings: totalTransactionValue - platformProfit,
+        period: startDate && endDate ? `${startDate} - ${endDate}` : 'Toàn thời gian'
+    };
+};

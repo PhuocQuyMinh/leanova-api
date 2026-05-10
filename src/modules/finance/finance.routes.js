@@ -42,4 +42,6 @@ router.patch('/admin/withdrawals/:id/status', isAdmin, financeController.reviewW
 
 router.get('/settings/global-commission', financeController.getGlobalCommission);
 
+router.get('/platform-stats', financeController.getPlatformStats);
+
 module.exports = router;
