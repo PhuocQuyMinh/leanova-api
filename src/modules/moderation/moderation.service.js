@@ -344,3 +344,36 @@ exports.updateInstructorTerms = async (newContent) => {
 
     return setting;
 };
+
+// 1. Lấy thông tin liên hệ (Public cho mọi người xem)
+exports.getContactInfo = async () => {
+    const setting = await SystemSetting.findByPk('CONTACT_INFO');
+
+    // Nếu chưa có trong DB, trả về một object rỗng mặc định để Frontend không bị lỗi
+    if (!setting) {
+        return {
+            email: 'support@leanova.com',
+            phone: '',
+            address: '',
+            facebook: ''
+        };
+    }
+
+    // Chuyển chuỗi JSON từ DB thành Object Javascript
+    return JSON.parse(setting.value);
+};
+
+// 2. Cập nhật thông tin liên hệ (Chỉ Admin)
+exports.updateContactInfo = async (contactData) => {
+    // Ép kiểu object thành chuỗi JSON để lưu vào field LONGTEXT
+    const jsonString = JSON.stringify(contactData);
+
+    // Dùng upsert: Có thì update, chưa có thì tự động create
+    const [setting, created] = await SystemSetting.upsert({
+        key: 'CONTACT_INFO',
+        value: jsonString,
+        description: 'Thông tin liên hệ của nền tảng Leanova (Lưu dưới dạng JSON)'
+    });
+
+    return JSON.parse(setting.value);
+};

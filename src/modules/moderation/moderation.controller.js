@@ -87,3 +87,23 @@ exports.updateTerms = catchAsync(async (req, res, next) => {
         data: { setting: updatedSetting }
     });
 });
+
+exports.getContactInfo = catchAsync(async (req, res, next) => {
+    const contactInfo = await moderationService.getContactInfo();
+
+    res.status(200).json({
+        status: 'success',
+        data: contactInfo
+    });
+});
+
+exports.updateContactInfo = catchAsync(async (req, res, next) => {
+    // Truyền toàn bộ req.body xuống service (Frontend gửi lên JSON object)
+    const updatedInfo = await moderationService.updateContactInfo(req.body);
+
+    res.status(200).json({
+        status: 'success',
+        message: 'Đã cập nhật thông tin liên hệ thành công!',
+        data: updatedInfo
+    });
+});

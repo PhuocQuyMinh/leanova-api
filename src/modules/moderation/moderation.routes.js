@@ -6,7 +6,7 @@ const upload = require('../../core/middlewares/upload.middleware'); // Import mu
 const router = express.Router();
 // Get system term
 router.get('/settings/instructor-terms', moderationController.getTerms);
-
+router.get('/contact-info', moderationController.getContactInfo);
 router.use(authMiddleware.protect); // Yêu cầu đăng nhập
 
 // 1. Nút thắt dành cho Học viên (Student) nộp đơn
@@ -33,5 +33,7 @@ router.put('/courses/:courseId/review', moderationController.reviewCourse);
 
 // Admin cập nhật nội dung HTML mới cho điều khoản
 router.patch('/settings/instructor-terms', authMiddleware.restrictTo('Admin'), moderationController.updateTerms);
+
+router.patch('/contact-info', moderationController.updateContactInfo);
 
 module.exports = router;
