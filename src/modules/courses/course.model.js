@@ -43,7 +43,27 @@ const Course = sequelize.define('Course', {
     reviewCount: {
         type: DataTypes.INTEGER,
         defaultValue: 0
-    }
+    },
+    // 1. Mô tả chi tiết nội dung khóa học (Những gì học viên sẽ học được)
+    courseContent: {
+        type: DataTypes.TEXT('long'),
+        allowNull: true,
+        comment: 'Nội dung chi tiết của khóa học (Hỗ trợ HTML/Rich Text)'
+    },
+
+    // 2. Đối tượng hướng đến
+    targetAudience: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Khóa học này dành cho ai? (Hỗ trợ HTML/Rich Text)'
+    },
+
+    // 3. Yêu cầu đầu vào (Prerequisites)
+    prerequisites: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Yêu cầu kiến thức/thiết bị trước khi tham gia khóa học'
+    },
 }, {
     tableName: 'courses',
     timestamps: true

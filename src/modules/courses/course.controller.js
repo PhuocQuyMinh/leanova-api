@@ -117,3 +117,13 @@ exports.addQuizQuestion = catchAsync(async (req, res, next) => {
         data: { question: newQuestion }
     });
 });
+
+// Lấy thống kê tài nguyên của khóa học
+exports.getCourseStats = catchAsync(async (req, res, next) => {
+    const stats = await courseService.getCourseStats(req.params.courseId);
+
+    res.status(200).json({
+        status: 'success',
+        data: { stats }
+    });
+});

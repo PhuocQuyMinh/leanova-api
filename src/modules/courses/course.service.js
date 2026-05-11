@@ -417,3 +417,83 @@ exports.addQuizQuestion = async (quizId, instructorId, questionData) => {
 
     return newQuestion;
 };
+
+// ==========================================
+// API lấy thống kê tài nguyên của khóa học
+// ==========================================
+exports.getCourseStats = async (courseId) => {
+    // 1. Kiểm tra khóa học tồn tại
+    const course = await Course.findByPk(courseId);
+    if (!course) throw new AppError('Không tìm thấy khóa học!', 404);
+
+    // 2. Lấy toàn bộ cấu trúc khóa học với lessons, attachments, quizzes
+    const courseData = await Course.findByPk(courseId, {
+        include: [
+            {
+                model: Section, as: 'sections',
+                include: [{
+                    model: Lesson, as: 'lessons',
+                    include: [
+                        { model: Attachment, as: 'attachments' },
+                        { model: Quiz, as: 'quizzes' }
+                    ]
+                }]
+            }
+        ],
+        order: [
+            [{ model: Section, as: 'sections' }, 'orderIndex', 'ASC'],
+            [{ model: Section, as: 'sections' }, { model: Lesson, as: 'lessons' }, 'orderIndex', 'ASC']
+        ]
+    });
+
+    // 3. Khởi tạo các biến đếm
+    let totalAttachments = 0;
+    let totalStudyHours = 0; // Tính bằng phút
+    let totalArticles = 0;
+    let totalQuizzes = 0;
+
+    // 4. Duyệt qua từng section và lesson để tính toán
+    courseData.sections.forEach(section => {
+        section.lessons.forEach(lesson => {
+            // Đếm tài liệu đính kèm
+            totalAttachments += lesson.attachments ? lesson.attachments.length : 0;
+
+            // Đếm bài quiz
+            totalQuizzes += lesson.quizzes ? lesson.quizzes.length : 0;
+
+            // Đếm bài viết (giả sử lessonType === 'Article')
+            if (lesson.lessonType === 'Article') {
+                totalArticles++;
+            }
+
+            // Tính tổng thời gian học
+            if (lesson.durationString) {
+                // durationString có dạng "HH:MM:SS" hoặc "MM:SS"
+                const durationParts = lesson.durationString.split(':').map(Number);
+                let minutes = 0;
+
+                if (durationParts.length === 3) {
+                    // HH:MM:SS
+                    minutes = durationParts[0] * 60 + durationParts[1] + durationParts[2] / 60;
+                } else if (durationParts.length === 2) {
+                    // MM:SS
+                    minutes = durationParts[0] + durationParts[1] / 60;
+                }
+
+                totalStudyHours += minutes;
+            }
+        });
+    });
+
+    // 5. Làm tròn tổng thời gian học (giữ 1 chữ số thập phân)
+    totalStudyHours = Math.round(totalStudyHours * 10) / 10;
+
+    return {
+        courseId: courseId,
+        courseTitle: course.title,
+        totalAttachments: totalAttachments,
+        totalStudyHours: totalStudyHours, // Đơn vị: phút
+        totalArticles: totalArticles,
+        totalQuizzes: totalQuizzes
+    };
+};

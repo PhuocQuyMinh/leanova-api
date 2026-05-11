@@ -8,7 +8,8 @@ const reviewController = require('./review.controller');
 
 // Public: Ai cũng xem được review
 router.get('/:courseId/reviews', reviewController.getCourseReviews);
-
+// Lấy thống kê tài nguyên của khóa học
+router.get('/:courseId/stats', courseController.getCourseStats);
 // Lớp bảo vệ 1: Phải đăng nhập
 router.use(authMiddleware.protect);
 
