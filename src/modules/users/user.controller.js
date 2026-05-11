@@ -43,3 +43,12 @@ exports.unlockAccount = catchAsync(async (req, res, next) => {
         message: 'Đã mở khóa tài khoản thành công!'
     });
 });
+
+exports.getInstructorProfile = catchAsync(async (req, res, next) => {
+    const profile = await userService.getInstructorProfile(req.params.instructorId);
+
+    res.status(200).json({
+        status: 'success',
+        data: { instructor: profile }
+    });
+});

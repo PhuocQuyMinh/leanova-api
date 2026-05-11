@@ -1,6 +1,50 @@
 const User = require('./user.model');
 const AppError = require('../../core/utils/appError');
 const notifService = require('../notifications/notification.service'); // [MỚI] Thêm dòng này
+const Course = require('../courses/course.model');
+const Enrollment = require('../store/enrollment.model');
+const Review = require('../courses/review.model');
+
+// API lấy thông tin giới thiệu giảng viên công khai
+exports.getInstructorProfile = async (instructorId) => {
+    const instructor = await User.findOne({
+        where: { id: instructorId, role: 'Instructor' },
+        attributes: ['id', 'fullName', 'email', 'avatarUrl', 'bio']
+    });
+
+    if (!instructor) throw new AppError('Không tìm thấy giảng viên!', 404);
+
+    const courseIds = await Course.findAll({
+        where: { instructorId },
+        attributes: ['id']
+    });
+
+    const courseIdList = courseIds.map(course => course.id);
+    const coursesCount = courseIdList.length;
+
+    const studentCount = courseIdList.length > 0
+        ? await Enrollment.count({
+            where: { courseId: courseIdList },
+            distinct: true,
+            col: 'userId'
+        })
+        : 0;
+
+    const reviewCount = courseIdList.length > 0
+        ? await Review.count({ where: { courseId: courseIdList } })
+        : 0;
+
+    return {
+        id: instructor.id,
+        fullName: instructor.fullName,
+        email: instructor.email,
+        avatarUrl: instructor.avatarUrl,
+        bio: instructor.bio,
+        coursesCount,
+        studentCount,
+        reviewCount
+    };
+};
 
 // 1. Khóa tài khoản
 exports.lockAccount = async (targetUserId, lockReason) => {

@@ -4,6 +4,9 @@ const authMiddleware = require('../../core/middlewares/auth.middleware');
 
 const router = express.Router();
 
+// Công khai: xem thông tin giảng viên
+router.get('/instructors/:instructorId/profile', userController.getInstructorProfile);
+
 // Tất cả các route nằm DƯỚI dòng này đều bị bảo vệ bởi lớp 'protect' (Bắt buộc đăng nhập)
 router.use(authMiddleware.protect);
 

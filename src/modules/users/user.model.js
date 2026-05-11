@@ -58,6 +58,11 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: true // Lưu link ảnh đại diện từ Google
     },
+    bio: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'Giới thiệu ngắn về giảng viên'
+    },
 
     // [MỚI] Hỗ trợ Xác thực Email
     isEmailVerified: {
