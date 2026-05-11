@@ -10,7 +10,7 @@ const router = express.Router();
 router.get('/courses', storeController.getPublishedCourses);
 router.get('/coursesDetail/:id', storeController.getCourseDetailPublic);
 router.get('/search/courses', searchController.search);
-router.get('/vnpay_return', storeController.vnpayReturn);
+router.get('/vnpay-return', storeController.vnpayReturn);
 router.get('/courses/top-popular', storeController.getTopPopular);
 
 // ==========================================
