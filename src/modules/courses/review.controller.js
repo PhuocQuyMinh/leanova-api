@@ -7,9 +7,17 @@ exports.addReview = catchAsync(async (req, res, next) => {
     res.status(200).json({ status: 'success', data: result });
 });
 
+// review.controller.js
 exports.getCourseReviews = catchAsync(async (req, res, next) => {
-    const reviews = await reviewService.getCourseReviews(req.params.courseId);
-    res.status(200).json({ status: 'success', results: reviews.length, data: { reviews } });
+    // req.params.courseId lấy từ URL (VD: /api/courses/10/reviews)
+    // req.query chứa các query string (VD: ?mode=highlights hoặc ?page=2&limit=5)
+
+    const data = await reviewService.getCourseReviews(req.params.courseId, req.query);
+
+    res.status(200).json({
+        status: 'success',
+        data: data
+    });
 });
 
 // [HỌC VIÊN] Xóa đánh giá của chính mình

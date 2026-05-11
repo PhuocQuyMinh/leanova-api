@@ -42,7 +42,11 @@ exports.getCourseDetailPublic = async (courseId) => {
                 include: [{
                     model: Lesson, as: 'lessons',
                     // Che dấu nội dung: Chỉ trả về title, loại bài học, thời lượng và quyền xem thử
-                    attributes: ['id', 'title', 'lessonType', 'durationString', 'isPreviewable', 'orderIndex', 'videoUrl', 'articleContent']
+                    attributes: ['id', 'title', 'lessonType', 'durationString', 'isPreviewable', 'orderIndex', 'videoUrl', 'articleContent'],
+                    include: [
+                        { model: Attachment, as: 'attachments' },
+                        { model: Quiz, as: 'quizzes' }
+                    ]
                 }]
             }
         ],
@@ -58,12 +62,17 @@ exports.getCourseDetailPublic = async (courseId) => {
     // Chuyển instance của Sequelize thành object JSON thường để dễ chỉnh sửa
     const courseData = course.toJSON();
 
+    // Thêm số lượng học viên đã đăng ký thành công
+    courseData.enrollmentCount = await Enrollment.count({ where: { courseId } });
+
     courseData.sections.forEach(section => {
         section.lessons.forEach(lesson => {
             if (!lesson.isPreviewable) {
                 // Nếu không cho xem thử -> Xóa URL video và nội dung bài đọc trước khi gửi về Client
                 delete lesson.videoUrl;
                 delete lesson.articleContent;
+                delete lesson.attachments; // Ẩn luôn tài liệu đính kèm
+                delete lesson.quizzes; // Ẩn luôn bài kiểm tra
             }
         });
     });

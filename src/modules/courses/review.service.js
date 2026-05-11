@@ -87,12 +87,62 @@ exports.addOrUpdateReview = async (userId, courseId, rating, comment) => {
 };
 
 // 2. Lấy danh sách đánh giá của một khóa học (Public)
-exports.getCourseReviews = async (courseId) => {
-    return await Review.findAll({
-        where: { courseId },
-        include: [{ model: User, attributes: ['fullName'] }], // Kèm tên người đánh giá
-        order: [['createdAt', 'DESC']] // Đánh giá mới nhất lên đầu
+// 2. Lấy danh sách đánh giá của một khóa học (Hỗ trợ 2 chế độ: Highlights & Pagination)
+exports.getCourseReviews = async (courseId, queryData = {}) => {
+    const {
+        mode,             // 'highlights' hoặc undefined
+        page = 1,         // Trang hiện tại (mặc định 1)
+        limit = 5,        // Số lượng mỗi lần "Xem thêm" kéo về (mặc định 5)
+        sortBy = 'createdAt', // Sắp xếp theo: 'createdAt' (thời gian) hoặc 'rating' (số sao)
+        order = 'DESC'    // 'DESC' (giảm dần) hoặc 'ASC' (tăng dần)
+    } = queryData;
+
+    const whereClause = { courseId };
+    const includeClause = [{ model: User, attributes: ['fullName', 'avatarUrl', 'email'] }];
+
+    // ==========================================
+    // CHẾ ĐỘ 1: HIGHLIGHTS (Lấy 4 đánh giá nhiều sao nhất & mới nhất)
+    // ==========================================
+    if (mode === 'highlights') {
+        const highlights = await Review.findAll({
+            where: whereClause,
+            include: includeClause,
+            order: [
+                ['rating', 'DESC'],   // Ưu tiên 5 sao trước
+                ['createdAt', 'DESC'] // Cùng 5 sao thì lấy người đánh giá mới nhất
+            ],
+            limit: 4 // Cố định lấy 4 reviews
+        });
+
+        return { mode: 'highlights', reviews: highlights };
+    }
+
+    // ==========================================
+    // CHẾ ĐỘ 2: PHÂN TRANG (Dành cho nút "Xem thêm" hoặc Load More)
+    // ==========================================
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // Validate tham số sortBy để tránh lỗi SQL Injection nếu Frontend truyền bậy
+    const validSortFields = ['createdAt', 'rating'];
+    const sortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortOrder = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+    // Dùng findAndCountAll để trả về tổng số lượng, giúp Frontend biết khi nào nên ẩn nút "Xem thêm"
+    const { count, rows } = await Review.findAndCountAll({
+        where: whereClause,
+        include: includeClause,
+        order: [[sortField, sortOrder]],
+        limit: parseInt(limit),
+        offset: offset
     });
+
+    return {
+        mode: 'pagination',
+        totalReviews: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: parseInt(page),
+        reviews: rows
+    };
 };
 
 // 3. Học viên tự xóa đánh giá của mình
