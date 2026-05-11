@@ -8,9 +8,10 @@ const router = express.Router();
 // PUBLIC ROUTES (Khách vãng lai cũng xem được)
 // ==========================================
 router.get('/courses', storeController.getPublishedCourses);
-router.get('/courses/:id', storeController.getCourseDetailPublic);
+router.get('/coursesDetail/:id', storeController.getCourseDetailPublic);
 router.get('/search/courses', searchController.search);
 router.get('/vnpay_return', storeController.vnpayReturn);
+router.get('/courses/top-popular', storeController.getTopPopular);
 
 // ==========================================
 // PROTECTED ROUTES (Phải đăng nhập mới được mua)

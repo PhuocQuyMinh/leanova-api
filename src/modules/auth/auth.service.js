@@ -107,7 +107,17 @@ exports.login = async (email, password) => {
     }
 
     const token = signToken(user.id, user.role);
-    return { user, token };
+
+    // [ĐÃ SỬA] Chỉ bóc tách và trả về các thông tin an toàn (Safe Payload)
+    const safeUser = {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        avatarUrl: user.avatarUrl
+    };
+
+    return { user: safeUser, token };
 };
 
 // Khởi tạo Client của Google

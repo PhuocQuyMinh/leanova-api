@@ -10,6 +10,7 @@ exports.getMe = catchAsync(async (req, res, next) => {
                 id: req.user.id,
                 fullName: req.user.fullName,
                 email: req.user.email,
+                avartar: req.user.avatarUrl,
                 role: req.user.role
             }
         }

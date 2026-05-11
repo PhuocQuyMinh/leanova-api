@@ -355,7 +355,8 @@ exports.getContactInfo = async () => {
             email: 'support@leanova.com',
             phone: '',
             address: '',
-            facebook: ''
+            facebook: '',
+            aboutUs: ''
         };
     }
 

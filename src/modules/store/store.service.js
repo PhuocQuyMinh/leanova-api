@@ -26,7 +26,7 @@ const Favorite = require('../favorites/favorite.model'); // Import model mới
 exports.getPublishedCourses = async () => {
     return await Course.findAll({
         where: { status: 'Published' },
-        attributes: ['id', 'title', 'price', 'coverImage'], // Chỉ lấy các cột cần thiết cho giao diện thẻ (card)
+        attributes: ['id', 'title', 'price', 'coverImage', 'averageRating', 'reviewCount',], // Chỉ lấy các cột cần thiết cho giao diện thẻ (card)
         include: [{ model: User, as: 'instructor', attributes: ['fullName'] }]
     });
 };
@@ -672,4 +672,29 @@ exports.getLearningSpaceCourseDetail = async (userId, courseId) => {
     courseData.overallProgressPercent = enrollment.progressPercent; // % hoàn thành tổng thể
 
     return courseData;
+};
+
+// [MỚI] Lấy top 20 khóa học có nhiều lượt đăng ký nhất
+exports.getTopPopularCourses = async () => {
+    const popularCourses = await Enrollment.findAll({
+        attributes: [
+            'courseId',
+            // Đếm số lượng học viên cho mỗi khóa học
+            [sequelize.fn('COUNT', sequelize.col('courseId')), 'enrollmentCount']
+        ],
+        include: [
+            {
+                model: Course,
+                where: { status: 'Published' }, // Chỉ lấy các khóa học đang bán
+                attributes: ['id', 'title', 'price', 'coverImage', 'averageRating'],
+                include: [{ model: User, as: 'instructor', attributes: ['fullName'] }]
+            }
+        ],
+        group: ['courseId'], // Nhóm theo từng khóa học
+        order: [[sequelize.literal('enrollmentCount'), 'DESC']], // Sắp xếp theo số lượng đăng ký giảm dần
+        limit: 20, // Lấy top 20
+        subQuery: false // Bắt buộc khi dùng limit kèm aggregation trong Sequelize
+    });
+
+    return popularCourses;
 };

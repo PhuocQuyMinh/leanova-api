@@ -114,3 +114,14 @@ exports.getLearningSpace = catchAsync(async (req, res, next) => {
         data: courseDetail
     });
 });
+
+// [MỚI] Controller lấy danh sách khóa học phổ biến
+exports.getTopPopular = catchAsync(async (req, res, next) => {
+    const courses = await storeService.getTopPopularCourses();
+
+    res.status(200).json({
+        status: 'success',
+        results: courses.length,
+        data: { courses }
+    });
+});
