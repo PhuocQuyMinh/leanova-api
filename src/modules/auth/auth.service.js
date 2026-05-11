@@ -39,7 +39,7 @@ exports.register = async (userData) => {
 
     // 4. Gửi Email chào mừng kèm Link xác thực
     // const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verifyToken}`;
-    const verifyUrl = `test/verify-email?token=${verifyToken}`;
+    const verifyUrl = `http://localhost:3000/verify-email?token=${verifyToken}`;
 
     try {
         await sendEmail({
