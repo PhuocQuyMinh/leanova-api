@@ -81,11 +81,11 @@ exports.getLessonQuestions = async (lessonId) => {
         where: { lessonId },
         order: [['createdAt', 'DESC']],
         include: [
-            { model: User, as: 'author', attributes: ['id', 'fullName', 'role'] },
+            { model: User, as: 'author', attributes: ['id', 'fullName', 'role', 'avatarUrl'] },
             {
                 model: LessonAnswer,
                 as: 'answers',
-                include: [{ model: User, as: 'author', attributes: ['id', 'fullName'] }],
+                include: [{ model: User, as: 'author', attributes: ['id', 'fullName', 'avatarUrl'] }],
                 order: [['createdAt', 'ASC']] // Câu trả lời cũ xếp trên
             }
         ]
