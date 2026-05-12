@@ -21,6 +21,7 @@ const SystemSetting = require('../finance/system_setting.model');
 const sendEmail = require('../../core/utils/email.util');
 const notifService = require('../notifications/notification.service');
 const Favorite = require('../favorites/favorite.model'); // Import model mới
+const { Op } = require('sequelize');
 
 // 1. Cửa hàng: Lấy danh sách khóa học đang bán
 exports.getPublishedCourses = async () => {
@@ -612,7 +613,10 @@ exports.getLearningSpaceCourseDetail = async (userId, courseId) => {
                     model: Lesson, as: 'lessons',
                     include: [
                         { model: Attachment, as: 'attachments' },
-                        { model: Quiz, as: 'quizzes' }
+                        {
+                            model: Quiz, as: 'quizzes',
+                            include: [{ model: QuizQuestion, as: 'questions' }]
+                        }
                     ]
                 }]
             }
