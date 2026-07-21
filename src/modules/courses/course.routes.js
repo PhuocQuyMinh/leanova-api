@@ -22,13 +22,14 @@ router.use(authMiddleware.restrictTo('Instructor', 'Admin')); // Chỉ Giảng v
 // Quản lý khóa học
 router.post('/', courseController.createCourse);
 router.get('/my-courses', courseController.getMyCourses);
+router.get('/:id', courseController.getInstructorCourseDetail);
 router.put('/:id', upload.uploadAttachment.single('coverImage'), courseController.updateCourse);
 
 // Biên tập nội dung
 // Chương
 router.post('/:courseId/sections', courseController.addSection);
 router.put('/sections/:sectionId', courseController.updateSection);
-router.post('/sections/:sectionId/quizzes', courseController.addQuiz);
+router.post('/sections/:lessonId/quizzes', courseController.addQuiz);
 
 // Lesson
 router.post('/sections/:sectionId/lessons', upload.uploadVideo.single('video'), courseController.addLesson);

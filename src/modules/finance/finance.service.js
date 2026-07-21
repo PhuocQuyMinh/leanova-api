@@ -376,8 +376,6 @@ exports.getTopInstructors = async () => {
     });
 };
 
-// finance.service.js
-
 exports.getWeeklyRevenueStats = async (instructorId = null) => {
     // 1. Xác định mốc thời gian: 4 tuần trước kể từ đầu tuần hiện tại
     const fourWeeksAgo = moment().subtract(4, 'weeks').startOf('isoWeek').toDate();

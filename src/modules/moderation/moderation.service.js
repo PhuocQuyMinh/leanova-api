@@ -153,7 +153,7 @@ exports.createInstructorRequest = async (userId, requestData, file) => {
     try {
         const result = await cloudinary.uploader.upload(file.path, {
             folder: 'leanova_moderation/certificates',
-            resource_type: 'auto' // Quan trọng: Để 'auto' thì Cloudinary mới nhận được file PDF
+            resource_type: 'auto', // Cho phép mọi loại file (pdf, docx, jpg, png...)
         });
 
         certificateUrl = result.secure_url;

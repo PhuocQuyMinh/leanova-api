@@ -316,9 +316,10 @@ exports.updateAttachment = async (attachmentId, instructorId, attachmentData, fi
 
 // [MỚI] Thêm Bài Quiz vào Chương
 exports.addQuiz = async (lessonId, instructorId, quizData) => {
-    const lesson = await Section.findByPk(lessonId);
+    const lesson = await Lesson.findByPk(lessonId);
     if (!lesson) throw new AppError('Không tìm thấy bài học này!', 404);
 
+    const section = await Section.findByPk(lesson.sectionId);
     // [BẢO MẬT]
     await checkCourseOwnership(section.courseId, instructorId);
 
@@ -496,4 +497,38 @@ exports.getCourseStats = async (courseId) => {
         totalArticles: totalArticles,
         totalQuizzes: totalQuizzes
     };
+};
+
+// [CẬP NHẬT] Lấy chi tiết khóa học cho Giảng viên (Bao gồm Attachments và Quizzes)
+exports.getInstructorCourseDetail = async (courseId, instructorId) => {
+    // 1. Kiểm tra quyền sở hữu (Chống IDOR)
+    await checkCourseOwnership(courseId, instructorId);
+
+    // 2. Truy vấn đầy đủ thông tin cấu hình và nội dung
+    const course = await Course.findByPk(courseId, {
+        include: [
+            {
+                model: Section, as: 'sections',
+                include: [{
+                    model: Lesson, as: 'lessons',
+                    include: [
+                        // Lấy tài liệu đính kèm của bài học
+                        { model: Attachment, as: 'attachments' },
+                        // Lấy bài kiểm tra và các câu hỏi bên trong
+                        {
+                            model: Quiz, as: 'quizzes',
+                            include: [{ model: QuizQuestion, as: 'questions' }]
+                        }
+                    ]
+                }]
+            }
+        ],
+        // Sắp xếp thứ tự hiển thị chuẩn
+        order: [
+            [{ model: Section, as: 'sections' }, 'id', 'ASC'],
+            [{ model: Section, as: 'sections' }, { model: Lesson, as: 'lessons' }, 'id', 'ASC']
+        ]
+    });
+
+    return course;
 };

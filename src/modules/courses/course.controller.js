@@ -89,7 +89,7 @@ exports.updateAttachment = catchAsync(async (req, res, next) => {
 });
 
 exports.addQuiz = catchAsync(async (req, res, next) => {
-    const newQuiz = await courseService.addQuiz(req.params.sectionId, req.user.id, req.body);
+    const newQuiz = await courseService.addQuiz(req.params.lessonId, req.user.id, req.body);
     res.status(201).json({
         status: 'success',
         message: 'Tạo bài kiểm tra thành công!',
@@ -125,5 +125,14 @@ exports.getCourseStats = catchAsync(async (req, res, next) => {
     res.status(200).json({
         status: 'success',
         data: { stats }
+    });
+});
+
+exports.getInstructorCourseDetail = catchAsync(async (req, res, next) => {
+    const course = await courseService.getInstructorCourseDetail(req.params.id, req.user.id);
+
+    res.status(200).json({
+        status: 'success',
+        data: { course }
     });
 });
