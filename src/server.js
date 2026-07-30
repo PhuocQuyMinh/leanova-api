@@ -22,6 +22,8 @@ const SystemSetting = require('./modules/finance/system_setting.model');
 const LessonAnswer = require('./modules/qa/lesson_answer.model');
 const LessonQuestion = require('./modules/qa/lesson_question.model');
 const Notification = require('./modules/notifications/notification.model');
+const Testimonial = require('./modules/testimonials/testimonial.model');
+
 
 const app = require('./app');
 

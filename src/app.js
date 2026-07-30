@@ -17,6 +17,7 @@ app.use(morgan('dev')); // Log request ra console
 const authRoutes = require('./modules/auth/auth.routes');
 const userRoutes = require('./modules/users/user.routes');
 const courseRoutes = require('./modules/courses/course.routes');
+const testimonialRoutes = require('./modules/testimonials/testimonial.routes');
 const moderationRoutes = require('./modules/moderation/moderation.routes');
 const storeRoutes = require('./modules/store/store.routes');
 const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
@@ -39,6 +40,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 
 app.use('/api/courses', courseRoutes);
+
+app.use('/api/testimonials', testimonialRoutes);
 
 app.use('/api/moderation', moderationRoutes);
 
