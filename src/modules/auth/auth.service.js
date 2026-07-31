@@ -197,7 +197,7 @@ exports.forgotPassword = async (email) => {
 
     // 4. Gửi email
     // const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-    const resetUrl = `test/reset-password?token=${resetToken}`;
+    const resetUrl = `http://localhost:3000/reset-password?token=${resetToken}`;
 
     // DEBUG: In link ra terminal để test dễ hơn
     console.log('\n--- LINK ĐẶT LẠI MẬT KHẨU CỦA BẠN ĐÂY ---');
