@@ -103,7 +103,7 @@ Attachment.belongsTo(Lesson, { foreignKey: 'lessonId' });
 Course.hasMany(CartItem, { foreignKey: 'courseId' });
 CartItem.belongsTo(Course, { foreignKey: 'courseId' });
 
-Course.hasMany(Enrollment, { foreignKey: 'courseId' });
+Course.hasMany(Enrollment, { foreignKey: 'courseId', as: 'enrollments' });
 Enrollment.belongsTo(Course, { foreignKey: 'courseId' });
 
 Course.hasMany(Review, { foreignKey: 'courseId', as: 'reviews' });

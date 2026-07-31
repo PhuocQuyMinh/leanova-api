@@ -1,13 +1,16 @@
 const AppError = require('../../core/utils/appError');
 const Category = require('./category.model');
+const Enrollment = require('../store/enrollment.model');
 const Course = require('../courses/course.model'); // [MỚI] Import model khóa học
 const { Op } = require('sequelize');
+const sequelize = require('../../core/database/init.mysql');
 
-// 1. Logic lấy cây danh mục 2 cấp
+// 1. Logic lấy cây danh mục 2 cấp (Đã tích hợp đếm học viên)
 exports.getCategoryTree = async () => {
+    // Bước 1: Lấy khung cây danh mục (Level 1 và Level 2)
     const categories = await Category.findAll({
         where: {
-            parentId: null // Chỉ lấy các danh mục gốc
+            parentId: null
         },
         include: [
             {
@@ -17,15 +20,57 @@ exports.getCategoryTree = async () => {
             }
         ],
         attributes: ['id', 'name'],
-        order: [['id', 'ASC']] // Sắp xếp cho đẹp
+        order: [['id', 'ASC']]
     });
 
-    // Nếu không có dữ liệu, ném lỗi theo đúng chuẩn hệ thống
     if (!categories || categories.length === 0) {
-        throw new AppError('Hệ thống hiện chưa có danh mục khóa học nào!', 404); //[cite: 1, 2]
+        throw new AppError('Hệ thống hiện chưa có danh mục khóa học nào!', 404);
     }
 
-    return categories;
+    // Bước 2: Truy vấn Gom nhóm (GROUP BY) để đếm số học viên của từng danh mục
+    // Join từ bảng Course sang bảng Enrollment
+    const enrollmentCounts = await Course.findAll({
+        attributes: [
+            'categoryId',
+            // Đếm số lượng userId duy nhất (tránh đếm trùng nếu 1 user mua nhiều khóa trong cùng 1 danh mục)
+            [sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('enrollments.userId'))), 'studentCount']
+        ],
+        include: [{
+            model: Enrollment,
+            as: 'enrollments', // Alias này phải khớp với khai báo trong Course.hasMany
+            attributes: [] // Không cần lấy chi tiết, chỉ cần để JOIN
+        }],
+        group: ['Course.categoryId'],
+        raw: true // Trả về JSON thuần để dễ xử lý
+    });
+
+    // Bước 3: Tạo một Hash Map (Từ điển) để tra cứu số lượng học viên siêu tốc (O(1))
+    const countMap = {};
+    enrollmentCounts.forEach(item => {
+        countMap[item.categoryId] = parseInt(item.studentCount, 10) || 0;
+    });
+
+    // Bước 4: Gắn số lượng học viên vào cây danh mục
+    // Chuyển instance của Sequelize thành plain Object để có thể thêm thuộc tính mới
+    const plainCategories = categories.map(cat => cat.get({ plain: true }));
+
+    plainCategories.forEach(parent => {
+        // Mặc định danh mục cha có 0 học viên, sẽ cộng dồn từ danh mục con lên
+        parent.studentCount = 0;
+
+        if (parent.children) {
+            parent.children.forEach(child => {
+                // Lấy số lượng từ bảng tra cứu (Hash Map), nếu không có thì mặc định là 0
+                const count = countMap[child.id] || 0;
+                child.studentCount = count;
+
+                // (Tùy chọn) Cộng dồn lên danh mục cha nếu bạn muốn hiển thị tổng ở Level 1
+                parent.studentCount += count;
+            });
+        }
+    });
+
+    return plainCategories;
 };
 
 // 2. Logic tạo danh mục mới
